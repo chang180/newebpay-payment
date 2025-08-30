@@ -2,7 +2,7 @@
 
 > 🤖 這是一個為 AI 輔助開發而設計的文檔目錄，包含了 Newebpay Payment 插件的完整結構分析和開發指南。
 
-## � 目錄結構
+## 📁 目錄結構
 
 ```
 .ai-dev-docs/
@@ -14,60 +14,57 @@
 │   ├── development-guide.md   # 開發指南與最佳實務
 │   ├── code-snippets.md      # 常用程式碼片段與範例
 │   └── troubleshooting.md    # 問題排除指南
-├── tests/                     # 🧪 測試工具與腳本
+├── tests/                     # 🧪 活躍測試工具
 │   ├── test-new-payments.php          # 新支付方式功能測試
 │   ├── test-smartpay-integration.php  # 智慧ATM2.0 整合測試
-│   └── debug-payment-flow.php         # 支付流程除錯工具
-└── reports/                   # 📊 版本開發報告
-    ├── 智慧ATM2.0整合報告.md          # v1.0.9 智慧ATM2.0 功能整合
-    └── README版本更新報告.md          # readme.txt 版本支援度更新
+│   ├── debug-payment-flow.php         # 支付流程除錯工具
+│   └── README.md                      # 測試工具使用指南
+├── fixes/                     # 🔧 重要修復記錄
+│   └── php-dynamic-properties-fix.md  # PHP 動態屬性修復
+└── reports/                   # 📊 完成報告與參考文檔
+    ├── v1.0.10-progress-report-20250830.md  # 最終完成報告
+    ├── v1.0.10-technical-specifications.md # 技術規格文檔
+    ├── 智慧ATM2.0整合報告.md                  # SmartPay 整合報告
+    └── README版本更新報告.md                 # 版本更新摘要
 ```
 
-## 🚀 快速導航
+## 🎯 v1.0.10 WooCommerce Blocks 整合完成
 
-### 📚 開發文檔 (`docs/`)
-- **[plugin-structure.md](./docs/plugin-structure.md)** - 從這裡開始了解插件整體架構
-- **[class-analysis.md](./docs/class-analysis.md)** - 深入了解各個核心類別
-- **[api-documentation.md](./docs/api-documentation.md)** - 藍新金流 API 整合文檔
-- **[development-guide.md](./docs/development-guide.md)** - 開發最佳實務與規範
-- **[code-snippets.md](./docs/code-snippets.md)** - 常用程式碼範例
-- **[troubleshooting.md](./docs/troubleshooting.md)** - 常見問題解決方案
+### ✅ 已完成功能
+- **WooCommerce Blocks 結帳整合**: 完整支援 WooCommerce 區塊結帳系統
+- **智慧ATM2.0 (SmartPay) 整合**: 參數轉換與相容性處理
+- **付款方式選擇**: 支援所有 Newebpay 付款方式 (信用卡、ATM、超商等)
+- **相容性保證**: 同時支援傳統結帳和 WooCommerce Blocks
+- **生產就緒**: 移除所有調試代碼，適合生產環境使用
 
-### 🧪 測試工具 (`tests/`)
-- **[test-new-payments.php](./tests/test-new-payments.php)** - 新支付方式功能驗證
-- **[test-smartpay-integration.php](./tests/test-smartpay-integration.php)** - 智慧ATM2.0 專項測試
-- **[debug-payment-flow.php](./tests/debug-payment-flow.php)** - 支付流程除錯分析
+### 🔧 核心檔案結構
+- `includes/class-newebpay-wc-blocks.php` - WooCommerce Blocks 整合主檔案
+- `includes/nwp/nwpMPG.php` - 增強型付款閘道 (支援 Blocks)
+- `assets/js/wc-blocks-checkout.js` - 前端 JavaScript 整合
 
-### 📊 開發報告 (`reports/`)
-- **[v1.0.10 升級計劃](./reports/v1.0.10-block-display-upgrade-plan.md)** - Block Display 支援升級總體規劃
-- **[v1.0.10 執行腳本](./reports/v1.0.10-execution-script.md)** - 分階段執行指南與任務清單
-- **[v1.0.10 技術規範](./reports/v1.0.10-technical-specifications.md)** - 詳細技術實作規範
-- **[智慧ATM2.0整合報告](./reports/智慧ATM2.0整合報告.md)** - v1.0.9 新功能開發完整記錄
-- **[README版本更新報告](./reports/README版本更新報告.md)** - WordPress/WooCommerce 版本支援更新
-- **[開發報告總覽](./reports/README.md)** - 所有版本開發報告索引
+## 🚀 使用指南
 
-## 🎯 插件概述
+### 對於 AI 輔助開發
+1. **優先閱讀**: `docs/plugin-structure.md` 了解整體架構
+2. **開發參考**: `docs/development-guide.md` 獲取最佳實務
+3. **問題排除**: `docs/troubleshooting.md` 解決常見問題
+4. **測試工具**: `tests/` 目錄包含實用的測試腳本
+
+### 對於功能開發
+- 所有新功能都應遵循現有的 WooCommerce Blocks 整合模式
+- 支付方式參數應通過 `process_payment_with_blocks_context` 方法處理
+- 確保同時支援傳統表單和 WooCommerce Blocks 結帳流程
+
+## �️ 核心架構概述
 
 **Newebpay Payment** 是一個為 WooCommerce 設計的藍新科技金流整合插件。
 
-### 當前版本：v1.0.9 → 規劃中：v1.0.10
-- ✅ **v1.0.9 已完成**：Apple Pay、智慧ATM2.0、TWQR
-- ✅ **v1.0.9 已完成**：API 版本 2.3
-- ✅ **v1.0.9 已完成**：WordPress 6.8、WooCommerce 10.1 支援
-- 🔄 **v1.0.10 規劃中**：Gutenberg Block Display 支援
-- ✅ 要求：PHP 8.0+
-
-## 🏗️ 核心架構
-
-```
-newebpay-payment/
-├── Central.php                 # 主入口
-├── includes/nwp/              # 核心金流功能
-├── includes/api/              # API 功能模組  
-├── includes/invoice/          # 電子發票模組
-├── includes/nwpenc/          # 加密處理模組
-└── .ai-dev-docs/             # 開發文檔 (本目錄)
-```
+### 當前版本：v1.0.10
+- ✅ **已完成**：WooCommerce Blocks 完整整合
+- ✅ **已完成**：智慧ATM2.0 (SmartPay) 支援
+- ✅ **已完成**：Apple Pay、TWQR 整合
+- ✅ **已完成**：WordPress 6.8、WooCommerce 10.1 支援
+- ✅ **已完成**：PHP 8.0+ 相容性
 
 ## 🔧 開發指引
 

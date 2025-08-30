@@ -1,7 +1,7 @@
 <?php
 /**
- * Newebpay Blocks 管理類別
- * 
+ * Newebpay Blocks Management
+ *
  * @package NewebpayPayment
  * @subpackage Blocks
  * @since 1.0.10
@@ -39,6 +39,16 @@ class Newebpay_Blocks {
     private $assets_url;
     
     /**
+     * 外掛程式 URL
+     */
+    private $plugin_url;
+    
+    /**
+     * 外掛程式路徑
+     */
+    private $plugin_path;
+    
+    /**
      * 取得單例實例
      */
     public static function get_instance() {
@@ -52,6 +62,8 @@ class Newebpay_Blocks {
      * 建構函式
      */
     private function __construct() {
+        $this->plugin_path = NEWEB_MAIN_PATH;
+        $this->plugin_url = plugin_dir_url( NEWEB_MAIN_PATH . '/Central.php' );
         $this->blocks_path = NEWEB_MAIN_PATH . '/includes/blocks';
         $this->blocks_url = plugin_dir_url( NEWEB_MAIN_PATH . '/Central.php' ) . 'includes/blocks';
         $this->assets_url = plugin_dir_url( NEWEB_MAIN_PATH . '/Central.php' ) . 'assets';
@@ -70,6 +82,9 @@ class Newebpay_Blocks {
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_block_assets' ) );
         add_filter( 'block_categories_all', array( $this, 'add_block_category' ), 10, 2 );
         add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+        
+        // 添加測試短碼
+        add_shortcode( 'newebpay_test_block', array( $this, 'render_test_shortcode' ) );
     }
     
     /**
@@ -197,6 +212,12 @@ class Newebpay_Blocks {
      * 載入編輯器資源
      */
     public function enqueue_block_editor_assets() {
+        // 只在編輯器頁面載入
+        $screen = get_current_screen();
+        if ( ! $screen || ! in_array( $screen->base, array( 'post', 'page', 'edit-post', 'edit-page', 'site-editor' ) ) ) {
+            return;
+        }
+        
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
             error_log( "Newebpay Blocks: Enqueuing block editor assets" );
             error_log( "Newebpay Blocks: Assets URL: " . $this->assets_url );
@@ -205,9 +226,17 @@ class Newebpay_Blocks {
         $editor_js_path = $this->assets_url . '/js/blocks-editor.js';
         $editor_css_path = $this->assets_url . '/css/blocks-editor.css';
         
-        // 檢查檔案是否存在
-        $editor_js_file = str_replace( $this->plugin_url, $this->plugin_path, $editor_js_path );
-        $editor_css_file = str_replace( $this->plugin_url, $this->plugin_path, $editor_css_path );
+        // 檢查檔案是否存在 - 修正路徑計算
+        $editor_js_file = $this->plugin_path . '/assets/js/blocks-editor.js';
+        $editor_css_file = $this->plugin_path . '/assets/css/blocks-editor.css';
+        
+        // 只有檔案存在時才載入
+        if ( ! file_exists( $editor_js_file ) || ! file_exists( $editor_css_file ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( "Newebpay Blocks: Editor assets not found, skipping enqueue" );
+            }
+            return;
+        }
         
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
             error_log( "Newebpay Blocks: Editor JS file path: " . $editor_js_file );
@@ -251,14 +280,24 @@ class Newebpay_Blocks {
      */
     public function enqueue_block_assets() {
         // 只在有使用區塊的頁面載入資源
-        if ( $this->has_newebpay_blocks() ) {
+        if ( ! $this->has_newebpay_blocks() ) {
+            return;
+        }
+        
+        $frontend_css_file = $this->plugin_path . '/assets/css/blocks-frontend.css';
+        $frontend_js_file = $this->plugin_path . '/assets/js/blocks-frontend.js';
+        
+        // 只有檔案存在時才載入
+        if ( file_exists( $frontend_css_file ) ) {
             wp_enqueue_style(
                 'newebpay-blocks-frontend',
                 $this->assets_url . '/css/blocks-frontend.css',
                 array(),
                 '1.0.10'
             );
-            
+        }
+        
+        if ( file_exists( $frontend_js_file ) ) {
             wp_enqueue_script(
                 'newebpay-blocks-frontend',
                 $this->assets_url . '/js/blocks-frontend.js',
@@ -321,6 +360,20 @@ class Newebpay_Blocks {
             'callback' => array( $this, 'api_get_status' ),
             'permission_callback' => array( $this, 'check_api_permissions' )
         ) );
+        
+        // 添加測試端點
+        register_rest_route( 'newebpay/v1', '/test-payment-methods', array(
+            'methods' => 'GET',
+            'callback' => array( $this, 'api_get_test_payment_methods' ),
+            'permission_callback' => array( $this, 'check_api_permissions' )
+        ) );
+        
+        // 添加測試選擇端點
+        register_rest_route( 'newebpay/v1', '/test-selection', array(
+            'methods' => 'POST',
+            'callback' => array( $this, 'api_test_selection' ),
+            'permission_callback' => array( $this, 'check_api_permissions' )
+        ) );
     }
     
     /**
@@ -348,6 +401,59 @@ class Newebpay_Blocks {
             'wordpress_version' => get_bloginfo( 'version' ),
             'woocommerce_active' => class_exists( 'WooCommerce' ),
             'blocks_registered' => count( $this->blocks ),
+            'version' => '1.0.10'
+        ), 200 );
+    }
+    
+    /**
+     * API: 測試付款方式 (供測試用)
+     */
+    public function api_get_test_payment_methods( $request ) {
+        // 模擬啟用的付款方式，用於測試圖標顯示
+        $test_methods = array();
+        $all_methods = $this->get_all_payment_methods();
+        
+        // 選擇幾個付款方式進行測試
+        $test_keys = array( 'credit', 'webatm', 'vacc' );
+        
+        foreach ( $test_keys as $key ) {
+            if ( isset( $all_methods[ $key ] ) ) {
+                $method = $all_methods[ $key ];
+                $icon_url = $this->get_payment_method_icon_url( $method['icon'] );
+                
+                $test_methods[] = array_merge( $method, array(
+                    'id' => $key,
+                    'enabled' => true,
+                    'setting_key' => strtoupper( $key ),
+                    'icon' => $icon_url
+                ) );
+            }
+        }
+        
+        return new WP_REST_Response( array(
+            'success' => true,
+            'data' => $test_methods,
+            'count' => count( $test_methods ),
+            'version' => '1.0.10',
+            'note' => 'This is test data for icon display verification'
+        ), 200 );
+    }
+    
+    /**
+     * API: 測試選擇提交 (供測試用)
+     */
+    public function api_test_selection( $request ) {
+        $selected_method = $request->get_param( 'method' );
+        $timestamp = current_time( 'mysql' );
+        
+        return new WP_REST_Response( array(
+            'success' => true,
+            'message' => 'Selection received successfully',
+            'data' => array(
+                'selected_method' => $selected_method,
+                'timestamp' => $timestamp,
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ),
             'version' => '1.0.10'
         ), 200 );
     }
@@ -444,10 +550,16 @@ class Newebpay_Blocks {
             // 檢查該付款方式是否啟用
             $setting_key = $this->get_payment_method_setting_key( $key );
             if ( isset( $nwp_settings[ $setting_key ] ) && $nwp_settings[ $setting_key ] === 'yes' ) {
+                // 轉換圖標標識符為實際圖片 URL
+                $icon_url = $this->get_payment_method_icon_url( $method['icon'] );
+                
                 $methods[ $key ] = array_merge( $method, array(
                     'id' => $key,
+                    'value' => $key,  // 前端期望的欄位
+                    'label' => $method['name'],  // 前端期望的欄位
                     'enabled' => true,
-                    'setting_key' => $setting_key
+                    'setting_key' => $setting_key,
+                    'icon' => $icon_url  // 覆蓋原本的圖標標識符
                 ) );
             }
         }
@@ -456,7 +568,8 @@ class Newebpay_Blocks {
             error_log( 'Newebpay Blocks: Found ' . count( $methods ) . ' enabled payment methods.' );
         }
         
-        return $methods;
+        // 轉換關聯陣列為數字索引陣列，確保 JavaScript 能正確處理
+        return array_values( $methods );
     }
     
     /**
@@ -464,15 +577,16 @@ class Newebpay_Blocks {
      */
     private function get_payment_method_setting_key( $method_key ) {
         $setting_keys = array(
-            'credit' => 'CREDIT',
-            'webatm' => 'WEBATM', 
-            'vacc' => 'VACC',
-            'cvs' => 'CVS',
-            'barcode' => 'BARCODE',
-            'smartpay' => 'smartPay'
+            'credit' => 'NwpPaymentMethodCredit',
+            'webatm' => 'NwpPaymentMethodWebatm', 
+            'vacc' => 'NwpPaymentMethodVacc',
+            'cvs' => 'NwpPaymentMethodCVS',
+            'barcode' => 'NwpPaymentMethodBARCODE',
+            'smartpay' => 'NwpPaymentMethodSmartPay',  // 注意：傳統系統使用 SmartPay (大寫P)
+            'cvscom' => 'NwpPaymentMethodCVSCOMPayed'
         );
         
-        return isset( $setting_keys[ $method_key ] ) ? $setting_keys[ $method_key ] : strtoupper( $method_key );
+        return isset( $setting_keys[ $method_key ] ) ? $setting_keys[ $method_key ] : 'NwpPaymentMethod' . ucfirst( $method_key );
     }
     
     /**
@@ -509,6 +623,11 @@ class Newebpay_Blocks {
                 'name' => __( '智慧ATM2.0', 'newebpay-payment' ),
                 'description' => __( '智慧型ATM轉帳', 'newebpay-payment' ),
                 'icon' => 'smartphone'
+            ),
+            'cvscom' => array(
+                'name' => __( '超商取貨付款', 'newebpay-payment' ),
+                'description' => __( '超商取貨付款', 'newebpay-payment' ),
+                'icon' => 'shopping-bag'
             )
         );
     }
@@ -542,7 +661,7 @@ class Newebpay_Blocks {
         }
         
         // 檢查是否有啟用的付款方式
-        $payment_methods = array( 'CREDIT', 'WEBATM', 'VACC', 'CVS', 'BARCODE', 'smartPay' );
+        $payment_methods = array( 'CREDIT', 'WEBATM', 'VACC', 'CVS', 'BARCODE', 'smartPay', 'CVSCOM' );
         $enabled_methods = array();
         
         foreach ( $payment_methods as $method ) {
@@ -574,22 +693,45 @@ class Newebpay_Blocks {
     private function generate_payment_methods_html( $methods, $attributes ) {
         $layout = $attributes['layout'];
         $show_descriptions = $attributes['showDescriptions'];
+        $show_icons = $attributes['showIcons'];
         
-        $html = '<div class="wp-block-newebpay-payment-methods is-layout-' . esc_attr( $layout ) . '">';
+        // 主容器，使用前端 JavaScript 期望的 class 名稱
+        $html = '<div class="newebpay-blocks-container newebpay-blocks--' . esc_attr( $layout ) . '" ';
+        $html .= 'data-enable-selection="true" ';
+        $html .= 'data-allow-multiple="false" ';
+        $html .= 'data-enable-tooltips="true">';
         
-        foreach ( $methods as $key => $method ) {
-            $html .= '<div class="newebpay-payment-method" data-method="' . esc_attr( $key ) . '">';
-            $html .= '<div class="method-icon">';
-            $html .= '<span class="dashicons dashicons-' . esc_attr( $method['icon'] ) . '"></span>';
-            $html .= '</div>';
-            $html .= '<div class="method-content">';
-            $html .= '<h4 class="method-name">' . esc_html( $method['name'] ) . '</h4>';
+        // 添加隱藏的輸入欄位來儲存選擇的付款方式
+        $html .= '<input type="hidden" name="newebpay_selected_method" id="newebpay_selected_method" value="" />';
+        
+        foreach ( $methods as $method ) {
+            // 付款方式容器，使用前端 JavaScript 期望的結構
+            $html .= '<div class="newebpay-method newebpay-method--' . esc_attr( $layout ) . '" ';
+            $html .= 'data-method-id="' . esc_attr( $method['id'] ) . '" ';
+            $html .= 'data-method-type="' . esc_attr( strtoupper( $method['id'] ) ) . '" ';
+            $html .= 'tabindex="0" role="button">';
             
-            if ( $show_descriptions && ! empty( $method['description'] ) ) {
-                $html .= '<p class="method-description">' . esc_html( $method['description'] ) . '</p>';
+            // 圖標
+            if ( $show_icons && ! empty( $method['icon'] ) ) {
+                $html .= '<div class="newebpay-method__icon">';
+                $html .= '<img src="' . esc_url( $method['icon'] ) . '" ';
+                $html .= 'alt="' . esc_attr( $method['name'] ) . '" ';
+                $html .= 'style="max-width: 40px; height: auto;">';
+                $html .= '</div>';
             }
             
+            // 標題
+            $html .= '<div class="newebpay-method__title">';
+            $html .= esc_html( $method['name'] );
             $html .= '</div>';
+            
+            // 描述
+            if ( $show_descriptions && ! empty( $method['description'] ) ) {
+                $html .= '<div class="newebpay-method__description">';
+                $html .= esc_html( $method['description'] );
+                $html .= '</div>';
+            }
+            
             $html .= '</div>';
         }
         
@@ -618,11 +760,123 @@ class Newebpay_Blocks {
     }
     
     /**
+     * 取得付款方式圖標的 URL
+     */
+    private function get_payment_method_icon_url( $icon_identifier ) {
+        // 圖標映射表：標識符 => 文件名
+        $icon_map = array(
+            'credit-card' => 'credit-card.png',
+            'atm'         => 'atm.png',
+            'bank'        => 'bank.png',
+            'store'       => 'store.png',
+            'barcode'     => 'barcode.png',
+            'smartphone'  => 'smartphone.png'
+        );
+        
+        // 如果有對應的圖標文件，返回完整 URL
+        if ( isset( $icon_map[ $icon_identifier ] ) ) {
+            return $this->plugin_url . 'assets/images/' . $icon_map[ $icon_identifier ];
+        }
+        
+        // 如果沒有對應的圖標，使用預設的 newebpay logo
+        return $this->plugin_url . 'assets/images/newebpay-logo.png';
+    }
+
+    /**
      * 載入管理功能
      */
     private function load_admin() {
         if ( is_admin() ) {
             include_once $this->blocks_path . '/class-newebpay-blocks-admin.php';
         }
+    }
+    
+    /**
+     * 渲染測試短碼
+     */
+    public function render_test_shortcode( $atts ) {
+        // 設定默認屬性
+        $attributes = shortcode_atts( array(
+            'layout' => 'grid',
+            'showIcons' => true,
+            'showDescriptions' => true
+        ), $atts );
+        
+        // 轉換字符串為布爾值
+        $attributes['showIcons'] = filter_var( $attributes['showIcons'], FILTER_VALIDATE_BOOLEAN );
+        $attributes['showDescriptions'] = filter_var( $attributes['showDescriptions'], FILTER_VALIDATE_BOOLEAN );
+        
+        // 獲取測試付款方式
+        $test_methods = array(
+            array(
+                'id' => 'credit',
+                'name' => '信用卡',
+                'description' => '支援各大銀行信用卡',
+                'icon' => $this->plugin_url . 'assets/images/credit-card.png'
+            ),
+            array(
+                'id' => 'webatm',
+                'name' => '網路ATM',
+                'description' => '使用讀卡機進行轉帳',
+                'icon' => $this->plugin_url . 'assets/images/atm.png'
+            ),
+            array(
+                'id' => 'vacc',
+                'name' => 'ATM轉帳',
+                'description' => '虛擬帳號ATM轉帳',
+                'icon' => $this->plugin_url . 'assets/images/bank.png'
+            )
+        );
+        
+        // 生成 HTML
+        $html = $this->generate_payment_methods_html( $test_methods, $attributes );
+        
+        // 添加測試表單
+        $html .= '<div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px;">';
+        $html .= '<h4>測試結果:</h4>';
+        $html .= '<p>選擇的付款方式: <span id="selected-method-display">尚未選擇</span></p>';
+        $html .= '<button type="button" onclick="testSelection()">測試提交</button>';
+        $html .= '</div>';
+        
+        // 添加測試 JavaScript
+        $html .= '<script>
+        document.addEventListener("newebpayMethodSelection", function(event) {
+            const display = document.getElementById("selected-method-display");
+            if (display) {
+                display.textContent = event.detail.isSelected ? event.detail.methodId : "尚未選擇";
+            }
+        });
+        
+        function testSelection() {
+            const selectedMethod = document.getElementById("newebpay_selected_method");
+            if (selectedMethod && selectedMethod.value) {
+                alert("選擇的付款方式: " + selectedMethod.value);
+                
+                // 測試 API 提交
+                fetch("/wp-json/newebpay/v1/test-selection", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        method: selectedMethod.value
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("API Response:", data);
+                    alert("API 測試成功: " + JSON.stringify(data));
+                })
+                .catch(error => {
+                    console.error("API Error:", error);
+                    alert("API 測試失敗: " + error.message);
+                });
+            } else {
+                alert("請先選擇付款方式！");
+            }
+        }
+        </script>';
+        
+        return $html;
     }
 }

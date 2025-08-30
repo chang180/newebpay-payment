@@ -425,3 +425,160 @@
         display: none !important;
     }
 }
+
+/* WooCommerce Blocks Checkout Integration */
+.newebpay-payment-method-content {
+    padding: 16px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.newebpay-payment-description {
+    margin-bottom: 16px;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Payment Method Selector */
+.newebpay-method-selector {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8f9fa;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+}
+
+.newebpay-method-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.newebpay-method-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.newebpay-method-select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.newebpay-method-select:hover {
+    border-color: #bdc3c7;
+}
+
+/* Disabled Options Styling */
+.newebpay-method-select option:disabled {
+    color: #bbb !important;
+    background-color: #f5f5f5 !important;
+    font-style: italic;
+}
+
+/* CVS COM Not Payed Option */
+.newebpay-cvscom-option {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.newebpay-cvscom-checkbox {
+    margin: 0;
+    width: 18px;
+    height: 18px;
+    accent-color: #f39c12;
+    cursor: pointer;
+}
+
+.newebpay-cvscom-label {
+    margin: 0;
+    color: #856404;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.newebpay-cvscom-option:hover {
+    background: #fff2b3;
+    border-color: #ffdd57;
+}
+
+/* Method Details */
+.newebpay-method-details {
+    padding: 16px;
+    background: #f8f9fa;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.newebpay-method-name {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    text-align: center;
+    font-size: 16px;
+}
+
+.newebpay-method-desc {
+    color: #666;
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Responsive for Mobile */
+@media (max-width: 768px) {
+    .newebpay-payment-method-content {
+        padding: 12px 0;
+    }
+    
+    .newebpay-method-selector,
+    .newebpay-cvscom-option,
+    .newebpay-method-details {
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .newebpay-method-select {
+        padding: 12px;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    .newebpay-cvscom-checkbox {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .newebpay-cvscom-label {
+        font-size: 15px;
+    }
+}
+
+/* Loading and Error States */
+.newebpay-payment-method-content p {
+    margin: 16px 0;
+    padding: 12px;
+    text-align: center;
+}
+
+.newebpay-payment-method-content p[style*="color: #d63638"] {
+    background: #ffeaea;
+    border: 1px solid #f8d7da;
+    border-radius: 6px;
+    color: #721c24 !important;
+}

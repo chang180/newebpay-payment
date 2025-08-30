@@ -806,12 +806,63 @@ class WC_newebpay extends baseNwpMPG
      */
     public function validate_fields()
     {
-        $cvscom_not_payed = sanitize_text_field($_POST['cvscom_not_payed']);
-        if ($cvscom_not_payed == 'CVSCOMNotPayed') {
-            $this->nwpCVSCOMNotPayed = 1;
+        // 支援傳統表單和 WooCommerce Blocks 的參數名稱
+        $cvscom_not_payed = sanitize_text_field($_POST['cvscom_not_payed'] ?? '');
+        
+        // 檢查 WooCommerce Blocks 傳來的 cvscom 資料
+        if (empty($cvscom_not_payed) && isset($_POST['cvscom_not_payed_blocks'])) {
+            $cvscom_not_payed = sanitize_text_field($_POST['cvscom_not_payed_blocks']);
         }
-        $choose_payment = sanitize_text_field($_POST['nwp_selected_payments']);
-        if ($_POST['payment_method'] == $this->id) {
+        
+        if ($cvscom_not_payed == 'CVSCOMNotPayed' || $cvscom_not_payed == 'true' || $cvscom_not_payed == '1') {
+            $this->nwpCVSCOMNotPayed = 1;
+        } else {
+            $this->nwpCVSCOMNotPayed = 0;
+        }
+        
+        // 支援傳統表單和 WooCommerce Blocks 的付款方式選擇
+        $choose_payment = sanitize_text_field($_POST['nwp_selected_payments'] ?? '');
+        
+        // 檢查 WooCommerce Blocks 傳來的付款方式
+        if (empty($choose_payment) && isset($_POST['newebpay_selected_method'])) {
+            $choose_payment = sanitize_text_field($_POST['newebpay_selected_method']);
+        }
+        
+        // 也檢查 session storage 或其他可能的來源
+        if (empty($choose_payment) && isset($_POST['newebpay_wc_selected_method'])) {
+            $choose_payment = sanitize_text_field($_POST['newebpay_wc_selected_method']);
+        }
+        
+        // 也檢查 selectedmethod 欄位（WooCommerce Blocks 使用）
+        if (empty($choose_payment) && isset($_POST['selectedmethod'])) {
+            $choose_payment = sanitize_text_field($_POST['selectedmethod']);
+        }
+        
+        // 智慧ATM2.0 特殊處理：WooCommerce Blocks 可能傳送 smartpay，需要轉換為 SmartPay
+        if ($choose_payment === 'smartpay') {
+            $choose_payment = 'SmartPay';
+        }
+        
+        // 檢查是否是 newebpay 付款方式
+        $is_newebpay_payment = false;
+        
+        // 傳統方式：檢查 $_POST['payment_method']
+        if (isset($_POST['payment_method']) && $_POST['payment_method'] == $this->id) {
+            $is_newebpay_payment = true;
+        }
+        
+        // WooCommerce Blocks 方式：檢查是否有 newebpay 相關參數
+        if (!$is_newebpay_payment && (
+            isset($_POST['selectedmethod']) || 
+            isset($_POST['newebpay_selected_method']) || 
+            isset($_POST['nwp_selected_payments'])
+        )) {
+            $is_newebpay_payment = true;
+            // 為了確保後續處理正確，設置 payment_method
+            $_POST['payment_method'] = $this->id;
+        }
+        
+        if ($is_newebpay_payment) {
             $this->nwpSelectedPayment = $choose_payment;
             return true;
         } else {
@@ -952,10 +1003,25 @@ class WC_newebpay extends baseNwpMPG
     {
         $payment_method = array();
 
+        // Debug: 記錄所有設定（僅在完整 Debug 模式下）
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            error_log( 'Newebpay Settings for payment selection:' );
+            foreach ( $this->settings as $key => $value ) {
+                if ( strpos( $key, 'Method' ) !== false || in_array( $key, array( 'CREDIT', 'WEBATM', 'VACC', 'CVS', 'BARCODE' ) ) ) {
+                    error_log( "  {$key} = {$value}" );
+                }
+            }
+        }
+
         foreach ($this->settings as $row => $value) {
             if (str_contains($row, 'NwpPaymentMethod') && $value == 'yes') {
                 $payment_method[str_replace('NwpPaymentMethod', '', $row)] = 1;
             }
+        }
+
+        // Debug: 記錄找到的付款方式（僅在 Debug 模式下）
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            error_log( 'Newebpay: Found payment methods: ' . print_r( $payment_method, true ) );
         }
 
         return $payment_method;

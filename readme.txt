@@ -6,19 +6,26 @@ Tested up to: 6.8
 Requires PHP: 8.0
 WC requires at least: 8.0
 WC tested up to: 10.1
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-藍新科技金流外掛模組
+藍新科技金流外掛模組 - 支援 WooCommerce Blocks
 
 == Description ==
 
 藍新金流購物車外掛模組，提供合作特店與個人會員使用開放原始碼商店系統時，透過外掛套件快速完成界接藍新科技金流系統。
 
+✨ **v1.0.10 新功能**：完整支援 WooCommerce Blocks 結帳系統，提供現代化的區塊結帳體驗。
 
 藍新金流整合各種金流工具，讓商店簡易、快速地串接使用。
 不論代收模式(指由藍新撥款商店)，或閘道模式(指收單機構撥款商店)，皆能提供商店消費者多元支付方式，讓商店整合帳務輕鬆收款，針對各種支付場景彈性配置。
+
+**結帳系統支援**：
+- 傳統 WooCommerce 結帳頁面
+- 現代 WooCommerce Blocks 結帳系統
+- 完全相容兩種結帳方式
+
 藍新金流提供付款方支付頁面採「響應式網頁設計(Responsive Web Design,簡稱RWD)」。
 不論付款方使用之裝置為電腦、平版、手機等不同上網設備，藍新金流付款方支付頁將視付款方瀏覽器之螢幕大小，自動調整至最適合付款方瀏覽及操作之介面，讓交易資訊在不同大小螢幕上都能一目了然。
 使操作介面更友善、支付更快速，提升良好的使用者經驗。
@@ -75,6 +82,16 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 == Frequently Asked Questions ==
 
 == Changelog ==
+
+= 1.0.10 =
+* 新功能：完整支援 WooCommerce Blocks 結帳系統
+* 新功能：現代化區塊結帳介面整合，支援所有付款方式
+* 改進：智慧ATM2.0 參數自動轉換 (smartpay ↔ SmartPay)
+* 改進：同時支援傳統結帳和 WooCommerce Blocks 結帳
+* 改進：JavaScript API 更新為現代 onPaymentSetup 方法
+* 改進：完善的錯誤處理和降級機制
+* 最佳化：移除開發和調試代碼，生產環境就緒
+* 相容性：測試並支援最新的 WooCommerce Blocks 11.0+
 
 = 1.0.9 =
 * 新增支付方式：Apple Pay、智慧ATM2.0、TWQR

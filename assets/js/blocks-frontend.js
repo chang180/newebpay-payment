@@ -175,6 +175,9 @@
                 method.classList.add('newebpay-method--selected');
             }
 
+            // Update hidden input field for form submission
+            this.updateSelectedMethodInput(block, !wasSelected ? methodId : '');
+
             // Trigger events
             this.triggerMethodSelection(method, block, !wasSelected);
             
@@ -186,6 +189,19 @@
             // Analytics tracking
             if (block.config.enableAnalytics) {
                 this.trackMethodSelection(method, block);
+            }
+        }
+
+        /**
+         * Update hidden input field with selected method
+         */
+        updateSelectedMethodInput(block, methodId) {
+            const hiddenInput = block.container.querySelector('#newebpay_selected_method');
+            if (hiddenInput) {
+                hiddenInput.value = methodId;
+                
+                // Trigger change event for other scripts
+                hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
 
