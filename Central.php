@@ -107,6 +107,11 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			if ( function_exists( 'register_block_type' ) ) {
 				include_once NEWEB_MAIN_PATH . '/includes/blocks/class-newebpay-blocks.php';
 				
+				// Load test runner in development/debug mode
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					include_once NEWEB_MAIN_PATH . '/includes/blocks/class-newebpay-blocks-test.php';
+				}
+				
 				// Initialize blocks after WordPress init
 				add_action( 'init', function() {
 					Newebpay_Blocks::get_instance();

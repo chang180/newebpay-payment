@@ -1,0 +1,427 @@
+/**
+ * Newebpay Blocks Frontend Styles
+ * 
+ * @package NeWebPay_Payment
+ * @version 1.0.10
+ * @author Newebpay
+ */
+
+/* Block Container */
+.newebpay-blocks-container {
+    margin: 24px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.newebpay-blocks-container * {
+    box-sizing: border-box;
+}
+
+/* Loading State */
+.newebpay-blocks-container.newebpay-blocks--loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.newebpay-blocks-container.newebpay-blocks--ready {
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Block Title */
+.newebpay-blocks__title {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+/* Layout Variations */
+.newebpay-blocks-container.newebpay-blocks--grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+.newebpay-blocks-container.newebpay-blocks--list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.newebpay-blocks-container.newebpay-blocks--inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+}
+
+/* Payment Method Card */
+.newebpay-method {
+    background: #ffffff;
+    border: 2px solid #e1e8ed;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.newebpay-method::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    transition: left 0.5s;
+}
+
+.newebpay-method:hover::before {
+    left: 100%;
+}
+
+.newebpay-method:hover {
+    border-color: #3498db;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+}
+
+.newebpay-method:focus {
+    outline: 3px solid #3498db;
+    outline-offset: 2px;
+    border-color: #3498db;
+}
+
+.newebpay-method:active {
+    transform: translateY(-2px);
+}
+
+/* Selected State */
+.newebpay-method--selected {
+    border-color: #27ae60;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fff9 100%);
+    box-shadow: 0 4px 20px rgba(39, 174, 96, 0.3);
+}
+
+.newebpay-method--selected::after {
+    content: '✓';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 24px;
+    height: 24px;
+    background: #27ae60;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Hover State for Selected */
+.newebpay-method--selected:hover {
+    border-color: #219a52;
+    box-shadow: 0 8px 30px rgba(39, 174, 96, 0.4);
+}
+
+/* List Layout Adaptations */
+.newebpay-blocks--list .newebpay-method {
+    display: flex;
+    align-items: center;
+    text-align: left;
+    padding: 16px 20px;
+}
+
+.newebpay-blocks--list .newebpay-method__icon {
+    margin-right: 16px;
+    margin-bottom: 0 !important;
+    flex-shrink: 0;
+}
+
+.newebpay-blocks--list .newebpay-method__content {
+    flex: 1;
+}
+
+.newebpay-blocks--list .newebpay-method__title {
+    text-align: left;
+}
+
+.newebpay-blocks--list .newebpay-method__description {
+    text-align: left;
+}
+
+/* Inline Layout Adaptations */
+.newebpay-blocks--inline .newebpay-method {
+    flex: 0 0 auto;
+    min-width: 180px;
+    max-width: 220px;
+}
+
+/* Method Components */
+.newebpay-method__icon {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+}
+
+.newebpay-method__icon img {
+    max-width: 50px;
+    max-height: 50px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    transition: transform 0.3s ease;
+}
+
+.newebpay-method:hover .newebpay-method__icon img {
+    transform: scale(1.1);
+}
+
+.newebpay-method__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #2c3e50;
+    line-height: 1.3;
+}
+
+.newebpay-method__description {
+    font-size: 14px;
+    color: #7f8c8d;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Special Method Types */
+.newebpay-method--credit {
+    border-color: #e74c3c;
+}
+
+.newebpay-method--credit:hover {
+    border-color: #c0392b;
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
+}
+
+.newebpay-method--atm {
+    border-color: #f39c12;
+}
+
+.newebpay-method--atm:hover {
+    border-color: #e67e22;
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+}
+
+.newebpay-method--cvs {
+    border-color: #9b59b6;
+}
+
+.newebpay-method--cvs:hover {
+    border-color: #8e44ad;
+    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
+}
+
+.newebpay-method--barcode {
+    border-color: #1abc9c;
+}
+
+.newebpay-method--barcode:hover {
+    border-color: #16a085;
+    box-shadow: 0 8px 25px rgba(26, 188, 156, 0.2);
+}
+
+/* Loading Spinner */
+.newebpay-loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: newebpay-spin 1s linear infinite;
+}
+
+@keyframes newebpay-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Tooltip */
+.newebpay-tooltip {
+    position: absolute;
+    background: #2c3e50;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    max-width: 200px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.newebpay-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #2c3e50 transparent transparent transparent;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .newebpay-blocks-container.newebpay-blocks--grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+    }
+    
+    .newebpay-blocks-container.newebpay-blocks--inline {
+        justify-content: flex-start;
+    }
+    
+    .newebpay-blocks--inline .newebpay-method {
+        min-width: 160px;
+        max-width: 180px;
+    }
+    
+    .newebpay-method {
+        padding: 16px;
+    }
+    
+    .newebpay-method__title {
+        font-size: 15px;
+    }
+    
+    .newebpay-method__description {
+        font-size: 13px;
+    }
+    
+    .newebpay-method__icon {
+        height: 50px;
+        margin-bottom: 10px;
+    }
+    
+    .newebpay-method__icon img {
+        max-width: 40px;
+        max-height: 40px;
+    }
+}
+
+@media (max-width: 480px) {
+    .newebpay-blocks-container {
+        margin: 16px 0;
+    }
+    
+    .newebpay-blocks-container.newebpay-blocks--grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .newebpay-blocks-container.newebpay-blocks--inline {
+        flex-direction: column;
+    }
+    
+    .newebpay-blocks--inline .newebpay-method {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .newebpay-blocks--list .newebpay-method {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px;
+    }
+    
+    .newebpay-blocks--list .newebpay-method__icon {
+        margin-right: 0;
+        margin-bottom: 12px !important;
+    }
+    
+    .newebpay-blocks--list .newebpay-method__title,
+    .newebpay-blocks--list .newebpay-method__description {
+        text-align: center;
+    }
+    
+    .newebpay-blocks__title {
+        font-size: 1.3em;
+        margin-bottom: 16px;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .newebpay-method {
+        border-width: 3px;
+    }
+    
+    .newebpay-method:hover,
+    .newebpay-method--selected {
+        border-width: 4px;
+    }
+    
+    .newebpay-method__title {
+        color: #000;
+    }
+    
+    .newebpay-method__description {
+        color: #333;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .newebpay-method,
+    .newebpay-method::before,
+    .newebpay-method__icon img,
+    .newebpay-blocks-container.newebpay-blocks--ready,
+    .newebpay-tooltip {
+        transition: none;
+    }
+    
+    .newebpay-method:hover {
+        transform: none;
+    }
+    
+    .newebpay-method:hover .newebpay-method__icon img {
+        transform: none;
+    }
+    
+    .newebpay-loading-spinner {
+        animation: none;
+        border-top-color: #666;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .newebpay-blocks-container {
+        break-inside: avoid;
+        box-shadow: none;
+    }
+    
+    .newebpay-method {
+        border-color: #000 !important;
+        box-shadow: none !important;
+        background: white !important;
+    }
+    
+    .newebpay-method::before,
+    .newebpay-method::after {
+        display: none !important;
+    }
+}
