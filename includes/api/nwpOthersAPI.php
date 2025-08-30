@@ -5,8 +5,59 @@
  */
 class nwpOthersAPI extends WC_newebpay
 {
+	/**
+	 * Merchant ID
+	 * @var string
+	 */
+	public $MerchantID;
 
+	/**
+	 * Hash Key
+	 * @var string
+	 */
+	public $HashKey;
 
+	/**
+	 * Hash IV
+	 * @var string
+	 */
+	public $HashIV;
+
+	/**
+	 * Test Mode
+	 * @var string
+	 */
+	public $TestMode;
+
+	/**
+	 * Invoice status
+	 * @var string
+	 */
+	public $inv_status;
+
+	/**
+	 * Electronic Invoice instance
+	 * @var nwpElectronicInvoice
+	 */
+	public $inv;
+
+	/**
+	 * Query Trade API URL
+	 * @var string
+	 */
+	public $queryTrade;
+
+	/**
+	 * Credit Close API URL
+	 * @var string
+	 */
+	public $creditClose;
+
+	/**
+	 * Encryption Process instance
+	 * @var encProcess
+	 */
+	public $encProcess;
 
 	/**
 	 * construct
@@ -231,14 +282,14 @@ class nwpOthersAPI extends WC_newebpay
 		$post_str = $post_data['body'];
 
 		// curl 結果
-		$result = $this->curl_(http_build_query($post_str), $api_url);
+		$result = $this->curl_($api_url, http_build_query($post_str));
 		$respondDecode = json_decode($result['web_info'], true);
 
 		return $respondDecode;
 	}
 
 	//curl 函式
-	private function curl_($curl_str = '', $curl_url)
+	private function curl_($curl_url, $curl_str = '')
 	{
 		//curl init
 		$ch = curl_init();

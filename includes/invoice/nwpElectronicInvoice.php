@@ -15,6 +15,30 @@ class nwpElectronicInvoice {
 	private $eiStatus;
 	private $createStatusTime;
 	private $notifyUrl;
+	
+	/**
+	 * Invoice Hash Key
+	 * @var string
+	 */
+	public $invHashKey;
+
+	/**
+	 * Invoice Hash IV
+	 * @var string
+	 */
+	public $invHashIV;
+
+	/**
+	 * Test Mode
+	 * @var string
+	 */
+	public $testMode;
+
+	/**
+	 * Encryption Process instance
+	 * @var encProcess
+	 */
+	public $encProcess;
 
 	private static $instance;
 

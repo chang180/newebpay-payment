@@ -3,6 +3,138 @@ require_once NEWEB_MAIN_PATH . '/includes/nwp/baseNwpMPG.php';
 
 class WC_newebpay extends baseNwpMPG
 {
+    /**
+     * Language Type
+     * @var string
+     */
+    public $LangType;
+
+    /**
+     * Merchant ID
+     * @var string
+     */
+    public $MerchantID;
+
+    /**
+     * Hash Key
+     * @var string
+     */
+    public $HashKey;
+
+    /**
+     * Hash IV
+     * @var string
+     */
+    public $HashIV;
+
+    /**
+     * Expire Date
+     * @var int
+     */
+    public $ExpireDate;
+
+    /**
+     * Test Mode
+     * @var string
+     */
+    public $TestMode;
+
+    /**
+     * Smart Pay Source Type
+     * @var string
+     */
+    public $SmartPaySourceType;
+
+    /**
+     * Smart Pay Source Bank ID
+     * @var string
+     */
+    public $SmartPaySourceBankID;
+
+    /**
+     * Smart Pay Source Account No
+     * @var string
+     */
+    public $SmartPaySourceAccountNo;
+
+    /**
+     * Gateway URL
+     * @var string
+     */
+    public $gateway;
+
+    /**
+     * Invoice Gateway URL
+     * @var string
+     */
+    public $inv_gateway;
+
+    /**
+     * Query Trade URL
+     * @var string
+     */
+    public $queryTrade;
+
+    /**
+     * Electronic Invoice Check
+     * @var string
+     */
+    public $eiChk;
+
+    /**
+     * Invoice Merchant ID
+     * @var string
+     */
+    public $InvMerchantID;
+
+    /**
+     * Invoice Hash Key
+     * @var string
+     */
+    public $InvHashKey;
+
+    /**
+     * Invoice Hash IV
+     * @var string
+     */
+    public $InvHashIV;
+
+    /**
+     * Tax Type
+     * @var string
+     */
+    public $TaxType;
+
+    /**
+     * Electronic Invoice Status
+     * @var string
+     */
+    public $eiStatus;
+
+    /**
+     * Create Status Time
+     * @var string
+     */
+    public $CreateStatusTime;
+
+    /**
+     * Notify URL
+     * @var string
+     */
+    public $notify_url;
+
+    /**
+     * Electronic Invoice instance
+     * @var nwpElectronicInvoice
+     */
+    public $inv;
+
+    /**
+     * Encryption Process instance
+     * @var encProcess
+     */
+    public $encProcess;
+
     public function __construct()
     {
         $this->id  = 'newebpay';
