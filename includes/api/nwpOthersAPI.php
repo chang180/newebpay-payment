@@ -344,7 +344,14 @@ class nwpOthersAPI extends WC_newebpay
 				if ($inv_checkout->Status == 'SUCCESS') {
 					$echo_str = '發票開立成功,回應訊息:' . sanitize_text_field($inv_checkout->Message);
 				} else {
-					$echo_str = $inv_checkout->Message;
+					// 檢查是否為重複開立發票的情況
+					if (strpos($inv_checkout->Message, '該筆自訂單號已重覆開立發票') !== false) {
+						// 如果是重複開立，只添加訂單備註，不顯示錯誤訊息
+						$order->add_order_note(__('發票處理結果：發票已存在，無需重複開立', 'woothemes'));
+						$echo_str = '發票已存在，無需重複開立';
+					} else {
+						$echo_str = '發票開立失敗<br>回應訊息：' . $inv_checkout->Message;
+					}
 				}
 			} else {
 				$echo_str = '您未啟用藍新電子發票';

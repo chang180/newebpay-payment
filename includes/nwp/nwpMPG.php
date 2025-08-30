@@ -232,6 +232,9 @@ class WC_newebpay extends baseNwpMPG
 
         // add_filter( 'woocommerce_thankyou_page', array( $this, 'thankyou_page' ) ); // 商店付款完成頁面
         add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text'));
+        
+        // 添加付款完成時清空購物車的 hook
+        add_action('woocommerce_payment_complete', array($this, 'on_payment_complete'), 10, 1);
     }
 
     /**
@@ -615,6 +618,12 @@ class WC_newebpay extends baseNwpMPG
             case 'ACCLINK':
                 if ($req_data['Status'] == 'SUCCESS') {
                     $order->update_status('processing');
+                    
+                    // 清空購物車 - 只有在付款成功且購物車不為空時才清空
+                    if (WC()->cart && !WC()->cart->is_empty()) {
+                        WC()->cart->empty_cart();
+                    }
+                    
                     $result .= '交易成功<br>';
                 } else {
                     $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
@@ -822,6 +831,12 @@ class WC_newebpay extends baseNwpMPG
 
         // 全部確認過後，修改訂單狀態(處理中，並寄通知信)
         $order->update_status('processing');
+        
+        // 清空購物車 - 只有在付款成功且購物車不為空時才清空
+        if (WC()->cart && !WC()->cart->is_empty()) {
+            WC()->cart->empty_cart();
+        }
+        
         $msg   = '訂單修改成功';
         $eiChk = $this->eiChk;
         if ($eiChk == 'yes') {
@@ -1128,6 +1143,22 @@ class WC_newebpay extends baseNwpMPG
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('newebpay_nonce')
             ));
+        }
+    }
+    
+    /**
+     * 處理付款完成事件，確保購物車被清空
+     */
+    public function on_payment_complete($order_id)
+    {
+        $order = wc_get_order($order_id);
+        
+        // 只處理藍新金流的訂單
+        if ($order && $order->get_payment_method() === 'newebpay') {
+            // 清空購物車 - 只有在購物車不為空時才清空
+            if (WC()->cart && !WC()->cart->is_empty()) {
+                WC()->cart->empty_cart();
+            }
         }
     }
 }

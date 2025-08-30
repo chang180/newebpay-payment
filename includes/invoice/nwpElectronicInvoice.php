@@ -273,15 +273,50 @@ class nwpElectronicInvoice {
 			),
 		);
 		$result                 = wp_remote_post( $url, $transaction_data_array ); // 背景送出
+		
+		// 檢查 wp_remote_post 是否返回錯誤
+		if ( is_wp_error( $result ) ) {
+			$orderNote = '發票開立失敗<br>網路連線錯誤：' . $result->get_error_message();
+			$order->add_order_note( __( $orderNote, 'woothemes' ) );
+			
+			// 返回一個模擬的錯誤回應對象
+			$respondDecode = (object) array(
+				'Status' => 'ERROR',
+				'Message' => '網路連線錯誤：' . $result->get_error_message()
+			);
+			return $respondDecode;
+		}
+		
 		// Add order notes on admin
 		$respondDecode = json_decode( $result['body'] );
+		
+		// 檢查 JSON 解析是否成功
+		if ( $respondDecode === null ) {
+			$orderNote = '發票開立失敗<br>回應格式錯誤：無法解析伺服器回應';
+			$order->add_order_note( __( $orderNote, 'woothemes' ) );
+			
+			// 返回一個模擬的錯誤回應對象
+			$respondDecode = (object) array(
+				'Status' => 'ERROR',
+				'Message' => '回應格式錯誤：無法解析伺服器回應'
+			);
+			return $respondDecode;
+		}
+		
 		if ( in_array( $respondDecode->Status, array( 'SUCCESS', 'CUSTOM' ) ) ) {
 			$resultDecode   = json_decode( $respondDecode->Result );
-			$invoiceTransNo = $resultDecode->InvoiceTransNo;
-			$invoiceNumber  = $resultDecode->InvoiceNumber;
-			$orderNote      = $respondDecode->Message . '<br>ezPay開立序號: ' . $invoiceTransNo . '<br>' . '發票號碼: ' . $invoiceNumber;
+			$invoiceTransNo = isset( $resultDecode->InvoiceTransNo ) ? $resultDecode->InvoiceTransNo : '';
+			$invoiceNumber  = isset( $resultDecode->InvoiceNumber ) ? $resultDecode->InvoiceNumber : '';
+			$message        = isset( $respondDecode->Message ) ? $respondDecode->Message : '發票開立成功';
+			$orderNote      = $message . '<br>ezPay開立序號: ' . $invoiceTransNo . '<br>' . '發票號碼: ' . $invoiceNumber;
 		} else {
-			$orderNote = '發票開立失敗<br>錯誤訊息：' . $respondDecode->Message;
+			$message = isset( $respondDecode->Message ) ? $respondDecode->Message : '未知錯誤';
+			// 檢查是否為重複開立發票的錯誤
+			if ( strpos( $message, '該筆自訂單號已重覆開立發票' ) !== false ) {
+				$orderNote = '發票處理結果：發票已存在（該筆自訂單號已重覆開立發票）';
+			} else {
+				$orderNote = '發票開立失敗<br>錯誤訊息：' . $message;
+			}
 		}
 		$order->add_order_note( __( $orderNote, 'woothemes' ) );
 
