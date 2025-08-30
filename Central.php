@@ -32,6 +32,9 @@ add_action(
 	function() {
 		if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
 			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+			
+			// 聲明與 WooCommerce 區塊結帳的相容性
+			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, true );
 		}
 	}
 );
@@ -93,8 +96,23 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			include_once NEWEB_MAIN_PATH . '/includes/invoice/nwpElectronicInvoice.php';
 			include_once NEWEB_MAIN_PATH . '/includes/api/nwpOthersAPI.php';
 			
-			// Initialize Blocks (v1.0.10+)
+			// Initialize WooCommerce Blocks Integration (v1.0.10+)
+			$this->init_wc_blocks();
+			
+			// Initialize Gutenberg Blocks support (v1.0.10+)
 			$this->init_blocks();
+		}
+		
+		/**
+		 * Initialize WooCommerce Blocks Integration
+		 *
+		 * @since 1.0.10
+		 */
+		private function init_wc_blocks() {
+			// Load WooCommerce Blocks integration
+			if ( class_exists( 'WooCommerce' ) && function_exists( 'woocommerce_blocks_loaded' ) ) {
+				include_once NEWEB_MAIN_PATH . '/includes/class-newebpay-wc-blocks.php';
+			}
 		}
 		
 		/**

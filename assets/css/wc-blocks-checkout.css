@@ -1,0 +1,216 @@
+/**
+ * Newebpay WooCommerce Blocks 結帳樣式
+ * 
+ * @package NeWebPay_Payment
+ * @version 1.0.10
+ */
+
+/* 付款方式容器 */
+.wp-block-woocommerce-checkout-payment-block .newebpay-payment-method-content {
+    padding: 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-top: 12px;
+    transition: all 0.3s ease;
+}
+
+.wp-block-woocommerce-checkout-payment-block .newebpay-payment-method-content:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-color: #0073aa;
+}
+
+/* 付款描述 */
+.newebpay-payment-description {
+    margin: 0 0 16px 0;
+    color: #495057;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* 功能特點 */
+.newebpay-payment-features {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.newebpay-payment-features p {
+    margin: 0;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.newebpay-security-notice {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.newebpay-methods-notice {
+    color: #17a2b8;
+    font-weight: 500;
+}
+
+/* 安全圖示 */
+.newebpay-security-notice::before {
+    content: "🔒";
+    font-size: 12px;
+}
+
+.newebpay-methods-notice::before {
+    content: "💳";
+    font-size: 12px;
+}
+
+/* 付款方式標籤 */
+.wc-block-components-payment-method-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wc-block-components-payment-method-label img {
+    max-width: 40px;
+    height: auto;
+    border-radius: 4px;
+}
+
+/* 編輯模式樣式 */
+.newebpay-payment-method-edit {
+    padding: 20px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    background: #f9f9f9;
+    text-align: center;
+}
+
+.newebpay-payment-method-edit h4 {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 16px;
+}
+
+.newebpay-payment-method-edit p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .newebpay-payment-method-content {
+        padding: 12px;
+        margin-top: 8px;
+    }
+    
+    .newebpay-payment-features {
+        gap: 6px;
+    }
+    
+    .newebpay-payment-features p {
+        font-size: 12px;
+    }
+    
+    .wc-block-components-payment-method-label img {
+        max-width: 32px;
+    }
+}
+
+/* 深色模式支援 */
+@media (prefers-color-scheme: dark) {
+    .newebpay-payment-method-content {
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .newebpay-payment-description {
+        color: #cbd5e0;
+    }
+    
+    .newebpay-payment-method-edit {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .newebpay-payment-method-edit h4 {
+        color: #f7fafc;
+    }
+    
+    .newebpay-payment-method-edit p {
+        color: #cbd5e0;
+    }
+}
+
+/* 動畫效果 */
+.newebpay-payment-method-content {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 選中狀態 */
+.wc-block-components-radio-control__option:checked + .wc-block-components-radio-control__label .newebpay-payment-method-content {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+/* 載入狀態 */
+.newebpay-payment-loading {
+    position: relative;
+    opacity: 0.6;
+}
+
+.newebpay-payment-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 錯誤狀態 */
+.newebpay-payment-error {
+    border-color: #dc3545;
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.newebpay-payment-error .newebpay-payment-description {
+    color: #721c24;
+}
+
+/* 成功狀態 */
+.newebpay-payment-success {
+    border-color: #28a745;
+    background: #d4edda;
+    color: #155724;
+}
+
+.newebpay-payment-success .newebpay-payment-description {
+    color: #155724;
+}
