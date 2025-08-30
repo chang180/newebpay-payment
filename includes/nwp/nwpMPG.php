@@ -1024,6 +1024,11 @@ class WC_newebpay extends baseNwpMPG
             error_log( 'Newebpay: Found payment methods: ' . print_r( $payment_method, true ) );
         }
 
+        // Debug: 記錄找到的付款方式（僅在 Debug 模式下）
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            error_log( 'Newebpay: Found payment methods: ' . print_r( $payment_method, true ) );
+        }
+
         return $payment_method;
     }
 

@@ -42,18 +42,12 @@ const Content = ( props ) => {
     // 處理支付資料提交到 WooCommerce Blocks
     useEffect( () => {
         const unsubscribe = onPaymentSetup( () => {
-            console.log('Newebpay: Payment setup triggered');
-            console.log('Newebpay: Selected method:', selectedMethod);
-            console.log('Newebpay: CVSCOM not payed:', cvscomNotPayed);
-            
             // 準備要傳遞給後端的資料
             const paymentMethodData = {
                 selectedMethod: selectedMethod,
                 newebpay_selected_method: selectedMethod,
                 cvscom_not_payed: cvscomNotPayed
             };
-            
-            console.log('Newebpay: Sending payment method data:', paymentMethodData);
             
             // 回傳成功狀態和資料給 WooCommerce Blocks
             if ( selectedMethod ) {
@@ -96,7 +90,6 @@ const Content = ( props ) => {
         });
         window.dispatchEvent(dataEvent);
         
-        console.log('Newebpay: 更新全域資料', window.newebpayData);
     }, [selectedMethod, cvscomNotPayed]);
 
     // 載入付款方式
@@ -104,7 +97,8 @@ const Content = ( props ) => {
         const fetchPaymentMethods = async () => {
             try {
                 setIsLoading(true);
-                const response = await fetch('/wp-json/newebpay/v1/payment-methods');
+                const apiUrl = window.newebpayBlocksData?.apiUrl || '/wp-json/newebpay/v1';
+                const response = await fetch(`${apiUrl}/payment-methods`);
                 const data = await response.json();
                 
                 if (data.success && data.data) {
@@ -122,7 +116,6 @@ const Content = ( props ) => {
                     setError('無法載入付款方式');
                 }
             } catch (err) {
-                console.error('Failed to load payment methods:', err);
                 setError('載入付款方式時發生錯誤');
             } finally {
                 setIsLoading(false);
@@ -500,24 +493,16 @@ if ( typeof window !== 'undefined' && window.document ) {
     document.head.appendChild( style );
 }
 
-console.log( 'Newebpay WooCommerce Blocks 付款方式已註冊' );
-
 // 確保在結帳時正確提交付款方式選擇
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Newebpay: DOM 已載入，設置事件監聽器');
-    
     // 監聽結帳按鈕點擊，確保資料已準備好
     document.addEventListener('click', function(event) {
         if (event.target.matches('.wc-block-components-checkout-place-order-button') ||
             event.target.closest('.wc-block-components-checkout-place-order-button')) {
             
-            console.log('Newebpay: 結帳按鈕被點擊');
-            
             // 從 sessionStorage 獲取最新選擇
             const selectedMethod = sessionStorage.getItem('newebpay_selected_method');
             const cvscomNotPayed = sessionStorage.getItem('newebpay_cvscom_not_payed') === 'true';
-            
-            console.log('Newebpay: 從 sessionStorage 獲取的值', { selectedMethod, cvscomNotPayed });
             
             // 確保隱藏欄位都已更新
             setTimeout(() => {
@@ -549,11 +534,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     cvscomInput.value = cvscomNotPayed ? 'CVSCOMNotPayed' : '';
                     
-                    console.log('Newebpay: 在表單中設置隱藏欄位', {
-                        form: form.className,
-                        method: methodInput.value,
-                        cvscom: cvscomInput.value
-                    });
                 });
             }, 100);
         }
@@ -561,8 +541,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 監聽付款方式選擇變更，同步到 sessionStorage
     window.addEventListener('newebpay-method-selected', function(event) {
-        console.log('Newebpay: 付款方式已選擇', event.detail);
-        
         if (typeof Storage !== 'undefined') {
             sessionStorage.setItem('newebpay_selected_method', event.detail.method || '');
             sessionStorage.setItem('newebpay_cvscom_not_payed', event.detail.cvscomNotPayed ? 'true' : 'false');
@@ -571,7 +549,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 監聽全域資料更新，設置隱藏欄位
     window.addEventListener('newebpay-data-updated', function(event) {
-        console.log('Newebpay: 全域資料已更新', event.detail);
         
         // 等待 DOM 準備好後設置隱藏欄位
         setTimeout(() => {
@@ -580,12 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.querySelector('form[name="checkout"]') ||
                         document.querySelector('.wc-block-checkout') ||
                         document.body;
-            
-            console.log('Newebpay: 找到的表單容器', {
-                formSelector: form.tagName + '.' + (form.className || 'no-class'),
-                formId: form.id || 'no-id',
-                isForm: form.tagName === 'FORM'
-            });
             
             if (form) {
                 // 設置 payment_method 隱藏欄位
@@ -632,10 +603,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 cvscomInput.value = event.detail.cvscomNotPayed ? 'CVSCOMNotPayed' : '';
                 
-                console.log('Newebpay: 已設置隱藏欄位', {
-                    method: methodInput.value,
-                    cvscom: cvscomInput.value
-                });
             }
         }, 100);
     });
