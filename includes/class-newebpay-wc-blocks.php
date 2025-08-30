@@ -44,8 +44,8 @@ class Newebpay_WooCommerce_Blocks_Integration {
             return;
         }
         
-        // 註冊區塊支援
-        add_action( 'woocommerce_blocks_loaded', array( $this, 'register_payment_method_blocks' ) );
+        // 註冊區塊支援 - 正確的 Hook
+        add_action( 'woocommerce_blocks_payment_method_type_registration', array( $this, 'register_payment_method_type' ) );
         
         // 註冊腳本和樣式
         add_action( 'init', array( $this, 'register_block_scripts' ) );
@@ -59,6 +59,18 @@ class Newebpay_WooCommerce_Blocks_Integration {
      */
     private function is_wc_blocks_available() {
         return class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' );
+    }
+    
+    /**
+     * 註冊付款方式類型 (WooCommerce Blocks 正確方法)
+     */
+    public function register_payment_method_type( $payment_method_registry ) {
+        if ( ! $this->is_wc_blocks_available() ) {
+            return;
+        }
+        
+        // 註冊 Newebpay 付款方式到 WooCommerce Blocks
+        $payment_method_registry->register( new Newebpay_Payment_Block() );
     }
     
     /**

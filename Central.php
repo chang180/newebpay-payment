@@ -110,8 +110,11 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 		 */
 		private function init_wc_blocks() {
 			// Load WooCommerce Blocks integration
-			if ( class_exists( 'WooCommerce' ) && function_exists( 'woocommerce_blocks_loaded' ) ) {
+			if ( class_exists( 'WooCommerce' ) && class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
 				include_once NEWEB_MAIN_PATH . '/includes/class-newebpay-wc-blocks.php';
+				
+				// Initialize the integration
+				Newebpay_WooCommerce_Blocks_Integration::get_instance();
 			}
 		}
 		

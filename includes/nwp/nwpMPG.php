@@ -143,6 +143,23 @@ class WC_newebpay extends baseNwpMPG
         $this->has_fields         = false;
         $this->method_title       = __('藍新金流', 'woocommerce');
         $this->method_description = __('透過藍新科技整合金流輕鬆付款', 'woocommerce');
+        
+        // 宣告支援 WooCommerce Blocks
+        $this->supports = array(
+            'products',
+            'refunds',
+            'add_payment_method',
+            'subscriptions',
+            'subscription_cancellation',
+            'subscription_suspension',
+            'subscription_reactivation',
+            'subscription_amount_changes',
+            'subscription_date_changes',
+            'subscription_payment_method_change',
+            'subscription_payment_method_change_customer',
+            'subscription_payment_method_change_admin',
+            'multiple_subscriptions',
+        );
 
         // Load the form fields.
         $this->init_form_fields();
