@@ -445,8 +445,72 @@ class Newebpay_WooCommerce_Blocks_Integration {
     }
     
     /**
-     * 創建測試頁面 (僅在開發模式下)
+     * 修改結帳提交的資料
      */
+    public function modify_checkout_posted_data( $data ) {
+        // 僅處理 newebpay 付款
+        if ( ! isset( $data['payment_method'] ) || $data['payment_method'] !== 'newebpay' ) {
+            return $data;
+        }
+        
+        // 確保包含付款方式選擇
+        if ( ! isset( $data['selectedmethod'] ) || empty( $data['selectedmethod'] ) ) {
+            $data['selectedmethod'] = 'credit';
+            $data['nwp_selected_payments'] = 'credit';
+            $data['newebpay_selected_method'] = 'credit';
+        }
+        
+        if ( ! isset( $data['cvscom_not_payed'] ) ) {
+            $data['cvscom_not_payed'] = '';
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * 確保 POST 資料在訂單處理時正確設置
+     */
+    public function ensure_post_data( $order_id, $posted_data, $order ) {
+        // 僅處理 newebpay 付款
+        if ( ! isset( $posted_data['payment_method'] ) || $posted_data['payment_method'] !== 'newebpay' ) {
+            return;
+        }
+        
+        // 確保 $_POST 包含必要的資料
+        $_POST['payment_method'] = 'newebpay';
+        
+        if ( ! isset( $_POST['selectedmethod'] ) || empty( $_POST['selectedmethod'] ) ) {
+            $_POST['selectedmethod'] = 'credit';
+            $_POST['nwp_selected_payments'] = 'credit';
+            $_POST['newebpay_selected_method'] = 'credit';
+        }
+        
+        if ( ! isset( $_POST['cvscom_not_payed'] ) ) {
+            $_POST['cvscom_not_payed'] = '';
+        }
+    }
+    
+    /**
+     * 確保付款資料在閘道處理前正確設置
+     */
+    public function ensure_payment_data( $gateway_id ) {
+        if ( $gateway_id !== 'newebpay' ) {
+            return;
+        }
+        
+        // 如果 payment_method 沒有設置，強制設置
+        if ( ! isset( $_POST['payment_method'] ) ) {
+            $_POST['payment_method'] = 'newebpay';
+        }
+        
+        // 確保有基本的付款方式資料
+        if ( ! isset( $_POST['selectedmethod'] ) && ! isset( $_POST['newebpay_selected_method'] ) ) {
+            $_POST['selectedmethod'] = 'credit';
+            $_POST['newebpay_selected_method'] = 'credit';
+            $_POST['nwp_selected_payments'] = 'credit';
+        }
+    }
+    
     /**
      * 處理付款上下文 (舊版，已停用)
      */
@@ -521,76 +585,6 @@ class Newebpay_Payment_Block extends Automattic\WooCommerce\Blocks\Payments\Inte
      */
     private function get_newebpay_setting( $key, $default = '' ) {
         return isset( $this->settings[ $key ] ) ? $this->settings[ $key ] : $default;
-    }
-    
-    /**
-     * 設置付款方式 POST 資料 (備用方法)
-     */
-    /**
-     * 確保 POST 資料在訂單處理時正確設置
-     */
-    public function ensure_post_data( $order_id, $posted_data, $order ) {
-        // 僅處理 newebpay 付款
-        if ( ! isset( $posted_data['payment_method'] ) || $posted_data['payment_method'] !== 'newebpay' ) {
-            return;
-        }
-        
-        // 確保 $_POST 包含必要的資料
-        $_POST['payment_method'] = 'newebpay';
-        
-        if ( ! isset( $_POST['selectedmethod'] ) || empty( $_POST['selectedmethod'] ) ) {
-            $_POST['selectedmethod'] = 'credit';
-            $_POST['nwp_selected_payments'] = 'credit';
-            $_POST['newebpay_selected_method'] = 'credit';
-        }
-        
-        if ( ! isset( $_POST['cvscom_not_payed'] ) ) {
-            $_POST['cvscom_not_payed'] = '';
-        }
-    }
-    
-    /**
-     * 修改結帳提交的資料
-     */
-    public function modify_checkout_posted_data( $data ) {
-        // 僅處理 newebpay 付款
-        if ( ! isset( $data['payment_method'] ) || $data['payment_method'] !== 'newebpay' ) {
-            return $data;
-        }
-        
-        // 確保包含付款方式選擇
-        if ( ! isset( $data['selectedmethod'] ) || empty( $data['selectedmethod'] ) ) {
-            $data['selectedmethod'] = 'credit';
-            $data['nwp_selected_payments'] = 'credit';
-            $data['newebpay_selected_method'] = 'credit';
-        }
-        
-        if ( ! isset( $data['cvscom_not_payed'] ) ) {
-            $data['cvscom_not_payed'] = '';
-        }
-        
-        return $data;
-    }
-    
-    /**
-     * 確保付款資料在閘道處理前正確設置
-     */
-    public function ensure_payment_data( $gateway_id ) {
-        if ( $gateway_id !== 'newebpay' ) {
-            return;
-        }
-        
-        // 如果 payment_method 沒有設置，強制設置
-        if ( ! isset( $_POST['payment_method'] ) ) {
-            $_POST['payment_method'] = 'newebpay';
-        }
-        
-        // 確保有基本的付款方式資料
-        if ( ! isset( $_POST['selectedmethod'] ) && ! isset( $_POST['newebpay_selected_method'] ) ) {
-            $_POST['selectedmethod'] = 'credit';
-            $_POST['newebpay_selected_method'] = 'credit';
-            $_POST['nwp_selected_payments'] = 'credit';
-        }
     }
 }
 
