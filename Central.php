@@ -5,7 +5,7 @@
  * Plugin Name: Newebpay Payment
  * Plugin URI: http://www.newebpay.com/
  * Description: NewebPay Payment for WooCommerce
- * Version: 1.0.9
+ * Version: 1.0.10
  * Author: Neweb Technologies Co., Ltd.
  * Author URI: https://www.newebpay.com/website/Page/content/download_api#2
  * License: GPLv2
@@ -92,6 +92,26 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			include_once NEWEB_MAIN_PATH . '/includes/nwp/nwpMPG.php';
 			include_once NEWEB_MAIN_PATH . '/includes/invoice/nwpElectronicInvoice.php';
 			include_once NEWEB_MAIN_PATH . '/includes/api/nwpOthersAPI.php';
+			
+			// Initialize Blocks (v1.0.10+)
+			$this->init_blocks();
+		}
+		
+		/**
+		 * Initialize Gutenberg Blocks support
+		 *
+		 * @since 1.0.10
+		 */
+		private function init_blocks() {
+			// Only load blocks if Gutenberg is available
+			if ( function_exists( 'register_block_type' ) ) {
+				include_once NEWEB_MAIN_PATH . '/includes/blocks/class-newebpay-blocks.php';
+				
+				// Initialize blocks after WordPress init
+				add_action( 'init', function() {
+					Newebpay_Blocks::get_instance();
+				}, 20 );
+			}
 		}
 	}
 

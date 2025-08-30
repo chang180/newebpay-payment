@@ -1,0 +1,44 @@
+/**
+ * Newebpay Blocks - Editor Styles
+ * 
+ * @package NewebpayPayment
+ * @since 1.0.10
+ */
+
+/* 編輯器預覽樣式 */
+.wp-block-newebpay-payment-methods.is-editor-preview {
+    border: 2px dashed #ddd;
+    padding: 1rem;
+    margin: 1rem 0;
+    background: #f9f9f9;
+}
+
+.wp-block-newebpay-payment-methods.is-editor-preview .newebpay-payment-method {
+    background: white;
+    border: 1px solid #ddd;
+    cursor: default;
+}
+
+.wp-block-newebpay-payment-methods.is-editor-preview .newebpay-payment-method:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: #ddd;
+}
+
+/* 佔位符樣式 */
+.newebpay-block-placeholder {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 2rem;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+/* 設定面板樣式 */
+.components-panel__body h4 {
+    margin-bottom: 8px;
+    font-weight: 600;
+}

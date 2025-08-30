@@ -39,17 +39,22 @@
 - **[debug-payment-flow.php](./tests/debug-payment-flow.php)** - 支付流程除錯分析
 
 ### 📊 開發報告 (`reports/`)
-- **[智慧ATM2.0整合報告.md](./reports/智慧ATM2.0整合報告.md)** - v1.0.9 新功能開發完整記錄
-- **[README版本更新報告.md](./reports/README版本更新報告.md)** - WordPress/WooCommerce 版本支援更新
+- **[v1.0.10 升級計劃](./reports/v1.0.10-block-display-upgrade-plan.md)** - Block Display 支援升級總體規劃
+- **[v1.0.10 執行腳本](./reports/v1.0.10-execution-script.md)** - 分階段執行指南與任務清單
+- **[v1.0.10 技術規範](./reports/v1.0.10-technical-specifications.md)** - 詳細技術實作規範
+- **[智慧ATM2.0整合報告](./reports/智慧ATM2.0整合報告.md)** - v1.0.9 新功能開發完整記錄
+- **[README版本更新報告](./reports/README版本更新報告.md)** - WordPress/WooCommerce 版本支援更新
+- **[開發報告總覽](./reports/README.md)** - 所有版本開發報告索引
 
 ## 🎯 插件概述
 
 **Newebpay Payment** 是一個為 WooCommerce 設計的藍新科技金流整合插件。
 
-### 當前版本：v1.0.9
-- ✅ 新增：Apple Pay、智慧ATM2.0、TWQR
-- ✅ 更新：API 版本 2.3
-- ✅ 支援：WordPress 6.8、WooCommerce 10.1
+### 當前版本：v1.0.9 → 規劃中：v1.0.10
+- ✅ **v1.0.9 已完成**：Apple Pay、智慧ATM2.0、TWQR
+- ✅ **v1.0.9 已完成**：API 版本 2.3
+- ✅ **v1.0.9 已完成**：WordPress 6.8、WooCommerce 10.1 支援
+- 🔄 **v1.0.10 規劃中**：Gutenberg Block Display 支援
 - ✅ 要求：PHP 8.0+
 
 ## 🏗️ 核心架構
