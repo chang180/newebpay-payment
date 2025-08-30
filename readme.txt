@@ -1,10 +1,12 @@
 === Newebpay Payment ===
 Contributors: newebpay
 Tags: ecommerce, e-commerce, payment, Newebpay, neweb
-Requires at least: 6.4
-Tested up to: 6.6.1
+Requires at least: 6.7
+Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 1.0.8
+WC requires at least: 8.0
+WC tested up to: 10.1
+Stable tag: 1.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,12 +39,16 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 - BitoPay
 - 微信支付 (跨境支付方式暫不支援測試模式)
 - 支付寶 (跨境支付方式暫不支援測試模式)
+- Apple Pay
+- 智慧ATM2.0 (需聯繫藍新金流申請支付方式)
+- TWQR
 - 超商取貨付款
 - 超商取貨不付款
 
 
 = 注意事項 =
 - 1.安裝此模組前，請先至藍新科技網站註冊會員，並申請相關收款服務，待服務審核通過後即可使用。
+- 2.智慧ATM2.0 為特殊支付方式，需要額外申請。啟用後需設定 SourceType、SourceBankID、SourceAccountNo 三個參數。
 
 
 = 聯絡我們 =
@@ -52,6 +58,8 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 = 系統需求 =
 
+- WordPress 6.7 或更高版本
+- WooCommerce 8.0 或更高版本
 - PHP version 8.0 or greater
 - MySQL version 5.5 or greater
 
@@ -68,7 +76,15 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 == Changelog ==
 
-V1.0.8
+= 1.0.9 =
+* 新增支付方式：Apple Pay、智慧ATM2.0、TWQR
+* 智慧ATM2.0：支援 SourceType、SourceBankID、SourceAccountNo 參數設定
+* 更新藍新金流 API 版本至 2.3（支援智慧ATM2.0功能）
+* 改善支付方式選擇機制，使用訂單元資料儲存
+* 測試並支援 WordPress 6.8 和 WooCommerce 10.1
+* 優化後台設定介面說明文字
+
+= 1.0.8 =
 支付方式新增 微信支付、支付寶 (跨境支付方式暫不支援測試模式)
 
 v1.0.7

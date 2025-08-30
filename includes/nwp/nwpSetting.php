@@ -155,6 +155,41 @@ return apply_filters(
 			'label'   => __( '支付寶', 'woocommerce' ),
 			'default' => 'no',
 		),
+		'NwpPaymentMethodAPPLEPAY'  => array(
+			'title'   => __( 'Apple Pay', 'woocommerce' ),
+			'type'    => 'checkbox',
+			'label'   => __( 'Apple Pay', 'woocommerce' ),
+			'default' => 'no',
+		),
+		'NwpPaymentMethodSmartPay'  => array(
+			'title'   => __( '智慧ATM2.0', 'woocommerce' ),
+			'type'    => 'checkbox',
+			'label'   => __( '智慧ATM2.0', 'woocommerce' ),
+			'description' => __( '智慧ATM2.0 需要設定 SourceType、SourceBankID、SourceAccountNo 三個參數（需聯繫藍新金流申請）', 'woocommerce' ),
+			'default' => 'no',
+			'desc_tip' => true,
+		),
+		'SmartPaySourceType'  => array(
+			'title'   => __( '智慧ATM2.0 - SourceType', 'woocommerce' ),
+			'type'    => 'text',
+			'default' => '',
+		),
+		'SmartPaySourceBankID'  => array(
+			'title'   => __( '智慧ATM2.0 - SourceBankID', 'woocommerce' ),
+			'type'    => 'text',
+			'default' => '',
+		),
+		'SmartPaySourceAccountNo'  => array(
+			'title'   => __( '智慧ATM2.0 - SourceAccountNo', 'woocommerce' ),
+			'type'    => 'text',
+			'default' => '',
+		),
+		'NwpPaymentMethodTWQR'  => array(
+			'title'   => __( 'TWQR', 'woocommerce' ),
+			'type'    => 'checkbox',
+			'label'   => __( 'TWQR', 'woocommerce' ),
+			'default' => 'no',
+		),
 		'NwpPaymentMethodCVSCOMPayed'  => array(
 			'title'   => __('超商取貨付款', 'woocommerce'),
 			'type'    => 'checkbox',

@@ -5,13 +5,16 @@
  * Plugin Name: Newebpay Payment
  * Plugin URI: http://www.newebpay.com/
  * Description: NewebPay Payment for WooCommerce
- * Version: 1.0.8
+ * Version: 1.0.9
  * Author: Neweb Technologies Co., Ltd.
  * Author URI: https://www.newebpay.com/website/Page/content/download_api#2
  * License: GPLv2
  * License URI: https://www.gnu.org/licenses/gpl-2.0.txt
- * WC requires at least: 6.4
- * WC tested up to: 6.6.1
+ * Requires at least: 6.7
+ * Tested up to: 6.8
+ * Requires PHP: 8.0
+ * WC requires at least: 8.0
+ * WC tested up to: 10.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -19,6 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'NEWEB_MAIN_PATH', dirname( __FILE__ ) );
+
+// Load Logger
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-logger.php';
 
 // To enable High-Performance Order Storage
 add_action(

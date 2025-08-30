@@ -28,6 +28,11 @@ class WC_newebpay extends baseNwpMPG
         $this->ExpireDate  = ($this->get_option('ExpireDate') < 1 || $this->get_option('ExpireDate') > 180) ? 7 : $this->get_option('ExpireDate');
         $this->TestMode    = $this->get_option('TestMode');
 
+        // 智慧ATM2.0 參數
+        $this->SmartPaySourceType = trim($this->get_option('SmartPaySourceType'));
+        $this->SmartPaySourceBankID = trim($this->get_option('SmartPaySourceBankID'));
+        $this->SmartPaySourceAccountNo = trim($this->get_option('SmartPaySourceAccountNo'));
+
         // Test Mode
         if ($this->TestMode == 'yes') {
             $this->gateway     = 'https://ccore.newebpay.com/MPG/mpg_gateway'; // 測試網址
@@ -122,7 +127,7 @@ class WC_newebpay extends baseNwpMPG
             'MerchantID'      => $this->MerchantID, // 商店代號
             'RespondType'     => 'JSON', // 回傳格式
             'TimeStamp'       => time(), // 時間戳記
-            'Version'         => '2.0',
+            'Version'         => '2.3',
             'MerchantOrderNo' => $merchant_order_no,
             'Amt'             => round($order->get_total()),
             'ItemDesc'        => $this->genetateItemDescByOrderItem($order),
@@ -136,8 +141,33 @@ class WC_newebpay extends baseNwpMPG
             'LangType'        => $this->LangType,
         );
 
-        $notes = $order->get_customer_order_notes();
-        $post_data[strtoupper($notes[0]->comment_content)] = 1;
+        // 從訂單 meta 資料取得選擇的支付方式
+        $selected_payment = $order->get_meta('_nwpSelectedPayment');
+        if (!empty($selected_payment)) {
+            // 智慧ATM2.0 特殊處理 - 使用 VACC 參數加上額外參數
+            if ($selected_payment === 'SmartPay') {
+                $post_data['VACC'] = 1;
+                
+                // 取得智慧ATM2.0的設定參數
+                $source_type = trim($this->get_option('SmartPaySourceType'));
+                $source_bank_id = trim($this->get_option('SmartPaySourceBankID'));
+                $source_account_no = trim($this->get_option('SmartPaySourceAccountNo'));
+                
+                // 加入智慧ATM2.0必要參數
+                if (!empty($source_type)) {
+                    $post_data['SourceType'] = $source_type;
+                }
+                if (!empty($source_bank_id)) {
+                    $post_data['SourceBankID'] = $source_bank_id;
+                }
+                if (!empty($source_account_no)) {
+                    $post_data['SourceAccountNo'] = $source_account_no;
+                }
+            } else {
+                // 其他支付方式的正常處理
+                $post_data[strtoupper($selected_payment)] = 1;
+            }
+        }
 
         $get_select_payment = $this->get_selected_payment();
 
@@ -164,7 +194,7 @@ class WC_newebpay extends baseNwpMPG
             'MerchantID'  => $this->MerchantID,
             'TradeInfo'   => $aes,
             'TradeSha'    => $sha256,
-            'Version'     => '2.0',
+            'Version'     => '2.3',
             'CartVersion' => 'New_WooCommerce_1_0_1',
         );
     }
@@ -668,6 +698,8 @@ class WC_newebpay extends baseNwpMPG
         }else{
             $order->update_meta_data('_CVSCOMNotPayed', 0);
         }
+        // 儲存選擇的支付方式到訂單 meta 資料
+        $order->update_meta_data('_nwpSelectedPayment', $this->nwpSelectedPayment);
         $order->save();
         $order->add_order_note($this->nwpSelectedPayment, 1);
         return array(
@@ -753,6 +785,9 @@ class WC_newebpay extends baseNwpMPG
             'BitoPay'    => 'BitoPay',
             'EZPWECHAT'  => '微信支付',
             'EZPALIPAY'  => '支付寶',
+            'APPLEPAY'   => 'Apple Pay',
+            'SmartPay'   => '智慧ATM2.0',
+            'TWQR'       => 'TWQR',
             'CVSCOMPayed' => '超商取貨付款',
             'CVSCOMNotPayed' => '超商取貨不付款',
         );
