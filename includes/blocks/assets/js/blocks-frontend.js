@@ -44,9 +44,90 @@
         $(document).on('newebpay:method-selected', '.wp-block-newebpay-payment-methods', function(e, methodKey) {
             console.log('Payment method selected:', methodKey);
             
-            // 這裡可以添加與 WooCommerce 結帳流程的整合
-            // 例如：更新隱藏的表單欄位、觸發 AJAX 請求等
+            // 與 WooCommerce 結帳流程整合
+            if (typeof wc_checkout_params !== 'undefined') {
+                // 在結帳頁面上
+                updateWooCommercePaymentMethod(methodKey);
+            } else if ($('.woocommerce-cart').length > 0) {
+                // 在購物車頁面上
+                showPaymentMethodInfo(methodKey);
+            } else {
+                // 一般頁面，顯示資訊或導向結帳
+                showGeneralPaymentInfo(methodKey);
+            }
         });
+    };
+    
+    // 更新 WooCommerce 付款方式
+    const updateWooCommercePaymentMethod = function(methodKey) {
+        // 尋找對應的 WooCommerce 付款方式選項
+        const paymentInput = $('input[name="payment_method"][value="nwp"]');
+        
+        if (paymentInput.length > 0) {
+            // 選擇 Newebpay 付款方式
+            paymentInput.prop('checked', true).trigger('change');
+            
+            // 觸發結帳更新
+            $('body').trigger('update_checkout');
+            
+            // 儲存選擇的付款子方式到隱藏欄位或 session
+            if ($('#newebpay_selected_method').length === 0) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    id: 'newebpay_selected_method',
+                    name: 'newebpay_selected_method',
+                    value: methodKey
+                }).appendTo('form.checkout');
+            } else {
+                $('#newebpay_selected_method').val(methodKey);
+            }
+        }
+    };
+    
+    // 顯示付款方式資訊（購物車頁面）
+    const showPaymentMethodInfo = function(methodKey) {
+        const methodNames = {
+            'credit': '信用卡',
+            'webatm': '網路ATM',
+            'vacc': 'ATM轉帳',
+            'cvs': '超商代碼',
+            'barcode': '超商條碼',
+            'SmartPay': '智慧ATM2.0'
+        };
+        
+        const methodName = methodNames[methodKey] || methodKey;
+        
+        // 移除之前的提示
+        $('.newebpay-payment-info').remove();
+        
+        // 顯示新的提示
+        const infoHtml = `
+            <div class="woocommerce-info newebpay-payment-info">
+                您選擇了 <strong>${methodName}</strong> 付款方式。
+                <a href="${window.location.origin}/checkout" class="button">前往結帳</a>
+            </div>
+        `;
+        
+        $('.woocommerce-cart-form').before(infoHtml);
+    };
+    
+    // 顯示一般付款資訊
+    const showGeneralPaymentInfo = function(methodKey) {
+        const methodNames = {
+            'credit': '信用卡',
+            'webatm': '網路ATM',  
+            'vacc': 'ATM轉帳',
+            'cvs': '超商代碼',
+            'barcode': '超商條碼',
+            'SmartPay': '智慧ATM2.0'
+        };
+        
+        const methodName = methodNames[methodKey] || methodKey;
+        
+        // 顯示模態或通知
+        if (typeof alert !== 'undefined') {
+            alert(`您選擇了 ${methodName} 付款方式。請前往購物車結帳以使用此付款方式。`);
+        }
     };
     
     // 響應式功能

@@ -52,6 +52,7 @@ class Newebpay_Blocks {
         
         $this->init_hooks();
         $this->register_blocks();
+        $this->load_admin();
     }
     
     /**
@@ -62,6 +63,7 @@ class Newebpay_Blocks {
         add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_editor_assets' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_block_assets' ) );
         add_filter( 'block_categories_all', array( $this, 'add_block_category' ), 10, 2 );
+        add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
     }
     
     /**
@@ -98,14 +100,34 @@ class Newebpay_Blocks {
      * 註冊區塊類型
      */
     public function register_block_types() {
+        // 檢查 WooCommerce 是否啟用
+        if ( ! class_exists( 'WooCommerce' ) ) {
+            return;
+        }
+        
         foreach ( $this->blocks as $block_key => $block_config ) {
-            register_block_type( $block_config['name'], array(
-                'attributes' => $block_config['attributes'],
-                'render_callback' => $block_config['render_callback'],
-                'editor_script' => 'newebpay-blocks-editor',
-                'editor_style' => 'newebpay-blocks-editor',
-                'style' => 'newebpay-blocks-frontend'
-            ) );
+            // 使用新的 block.json 註冊方式
+            $block_json_path = $this->blocks_path . '/blocks/' . $block_key;
+            
+            if ( file_exists( $block_json_path . '/block.json' ) ) {
+                register_block_type( $block_json_path, array(
+                    'render_callback' => $block_config['render_callback']
+                ) );
+            } else {
+                // 降級為手動註冊
+                register_block_type( $block_config['name'], array(
+                    'attributes' => $block_config['attributes'],
+                    'render_callback' => $block_config['render_callback'],
+                    'editor_script' => 'newebpay-blocks-editor',
+                    'editor_style' => 'newebpay-blocks-editor',
+                    'style' => 'newebpay-blocks-frontend'
+                ) );
+            }
+        }
+        
+        // 記錄成功註冊的訊息
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'Newebpay Blocks: Successfully registered ' . count( $this->blocks ) . ' block types.' );
         }
     }
     
@@ -336,5 +358,65 @@ class Newebpay_Blocks {
         }
         
         return false;
+    }
+    
+    /**
+     * 註冊 REST API 路由
+     */
+    public function register_rest_routes() {
+        register_rest_route( 'newebpay/v1', '/payment-methods', array(
+            'methods' => 'GET',
+            'callback' => array( $this, 'rest_get_payment_methods' ),
+            'permission_callback' => array( $this, 'check_rest_permissions' )
+        ) );
+        
+        register_rest_route( 'newebpay/v1', '/block-settings', array(
+            'methods' => 'GET',
+            'callback' => array( $this, 'rest_get_block_settings' ),
+            'permission_callback' => array( $this, 'check_rest_permissions' )
+        ) );
+    }
+    
+    /**
+     * REST API 權限檢查
+     */
+    public function check_rest_permissions( $request ) {
+        return current_user_can( 'edit_posts' );
+    }
+    
+    /**
+     * REST API: 取得付款方式
+     */
+    public function rest_get_payment_methods( $request ) {
+        $available_methods = $this->get_available_payment_methods();
+        $all_methods = $this->get_all_payment_methods();
+        
+        return new WP_REST_Response( array(
+            'available' => $available_methods,
+            'all' => $all_methods,
+            'settings_url' => admin_url( 'admin.php?page=wc-settings&tab=checkout&section=nwp' )
+        ), 200 );
+    }
+    
+    /**
+     * REST API: 取得區塊設定
+     */
+    public function rest_get_block_settings( $request ) {
+        $nwp_settings = get_option( 'woocommerce_nwp_settings', array() );
+        
+        return new WP_REST_Response( array(
+            'test_mode' => isset( $nwp_settings['TestMode'] ) ? $nwp_settings['TestMode'] : 'no',
+            'enabled' => isset( $nwp_settings['enabled'] ) ? $nwp_settings['enabled'] : 'no',
+            'version' => '1.0.10'
+        ), 200 );
+    }
+    
+    /**
+     * 載入管理功能
+     */
+    private function load_admin() {
+        if ( is_admin() ) {
+            include_once $this->blocks_path . '/class-newebpay-blocks-admin.php';
+        }
     }
 }

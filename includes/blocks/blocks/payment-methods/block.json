@@ -1,0 +1,44 @@
+{
+    "apiVersion": 2,
+    "name": "newebpay/payment-methods",
+    "version": "1.0.10",
+    "title": "Newebpay 付款方式",
+    "category": "newebpay",
+    "icon": "money-alt",
+    "description": "顯示 Newebpay 支援的付款方式選擇",
+    "keywords": ["payment", "newebpay", "付款", "金流"],
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": true,
+            "padding": true
+        },
+        "color": {
+            "background": true,
+            "text": true
+        }
+    },
+    "attributes": {
+        "showMethods": {
+            "type": "array",
+            "default": []
+        },
+        "layout": {
+            "type": "string",
+            "default": "grid"
+        },
+        "showDescriptions": {
+            "type": "boolean",
+            "default": true
+        },
+        "columnsCount": {
+            "type": "number",
+            "default": 3
+        }
+    },
+    "textdomain": "newebpay-payment",
+    "editorScript": "newebpay-blocks-editor",
+    "editorStyle": "newebpay-blocks-editor",
+    "style": "newebpay-blocks-frontend"
+}
