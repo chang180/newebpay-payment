@@ -1,0 +1,33 @@
+{
+    "apiVersion": 2,
+    "name": "newebpay/invoice-settings",
+    "version": "1.0.10",
+    "title": "Newebpay 電子發票設定",
+    "category": "newebpay",
+    "icon": "media-document",
+    "description": "讓用戶設定電子發票相關資訊",
+    "keywords": ["invoice", "newebpay", "發票", "電子發票"],
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "spacing": {
+            "margin": true,
+            "padding": true
+        }
+    },
+    "attributes": {
+        "showCompanyFields": {
+            "type": "boolean",
+            "default": true
+        },
+        "showPersonalFields": {
+            "type": "boolean",
+            "default": true
+        },
+        "defaultType": {
+            "type": "string",
+            "default": "personal"
+        }
+    },
+    "textdomain": "newebpay-payment"
+}

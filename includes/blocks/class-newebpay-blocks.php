@@ -199,6 +199,59 @@ class Newebpay_Blocks {
     }
     
     /**
+     * 註冊 REST API 路由
+     */
+    public function register_rest_routes() {
+        register_rest_route( 'newebpay/v1', '/payment-methods', array(
+            'methods' => 'GET',
+            'callback' => array( $this, 'api_get_payment_methods' ),
+            'permission_callback' => array( $this, 'check_api_permissions' )
+        ) );
+        
+        register_rest_route( 'newebpay/v1', '/status', array(
+            'methods' => 'GET',
+            'callback' => array( $this, 'api_get_status' ),
+            'permission_callback' => array( $this, 'check_api_permissions' )
+        ) );
+    }
+    
+    /**
+     * API: 取得付款方式
+     */
+    public function api_get_payment_methods( $request ) {
+        $methods = $this->get_available_payment_methods();
+        
+        return new WP_REST_Response( array(
+            'success' => true,
+            'data' => $methods,
+            'count' => count( $methods ),
+            'version' => '1.0.10'
+        ), 200 );
+    }
+    
+    /**
+     * API: 取得狀態
+     */
+    public function api_get_status( $request ) {
+        return new WP_REST_Response( array(
+            'success' => true,
+            'plugin_version' => '1.0.10',
+            'blocks_version' => '1.0.10',
+            'wordpress_version' => get_bloginfo( 'version' ),
+            'woocommerce_active' => class_exists( 'WooCommerce' ),
+            'blocks_registered' => count( $this->blocks ),
+            'version' => '1.0.10'
+        ), 200 );
+    }
+    
+    /**
+     * 檢查 API 權限
+     */
+    public function check_api_permissions( $request ) {
+        return true; // 公開 API，或根據需求調整
+    }
+    
+    /**
      * 渲染付款方式區塊
      */
     public function render_payment_methods_block( $attributes, $content ) {
@@ -358,57 +411,6 @@ class Newebpay_Blocks {
         }
         
         return false;
-    }
-    
-    /**
-     * 註冊 REST API 路由
-     */
-    public function register_rest_routes() {
-        register_rest_route( 'newebpay/v1', '/payment-methods', array(
-            'methods' => 'GET',
-            'callback' => array( $this, 'rest_get_payment_methods' ),
-            'permission_callback' => array( $this, 'check_rest_permissions' )
-        ) );
-        
-        register_rest_route( 'newebpay/v1', '/block-settings', array(
-            'methods' => 'GET',
-            'callback' => array( $this, 'rest_get_block_settings' ),
-            'permission_callback' => array( $this, 'check_rest_permissions' )
-        ) );
-    }
-    
-    /**
-     * REST API 權限檢查
-     */
-    public function check_rest_permissions( $request ) {
-        return current_user_can( 'edit_posts' );
-    }
-    
-    /**
-     * REST API: 取得付款方式
-     */
-    public function rest_get_payment_methods( $request ) {
-        $available_methods = $this->get_available_payment_methods();
-        $all_methods = $this->get_all_payment_methods();
-        
-        return new WP_REST_Response( array(
-            'available' => $available_methods,
-            'all' => $all_methods,
-            'settings_url' => admin_url( 'admin.php?page=wc-settings&tab=checkout&section=nwp' )
-        ), 200 );
-    }
-    
-    /**
-     * REST API: 取得區塊設定
-     */
-    public function rest_get_block_settings( $request ) {
-        $nwp_settings = get_option( 'woocommerce_nwp_settings', array() );
-        
-        return new WP_REST_Response( array(
-            'test_mode' => isset( $nwp_settings['TestMode'] ) ? $nwp_settings['TestMode'] : 'no',
-            'enabled' => isset( $nwp_settings['enabled'] ) ? $nwp_settings['enabled'] : 'no',
-            'version' => '1.0.10'
-        ), 200 );
     }
     
     /**

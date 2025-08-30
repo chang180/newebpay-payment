@@ -11,34 +11,192 @@
     padding: 1rem;
     margin: 1rem 0;
     background: #f9f9f9;
+    border-radius: 8px;
+    position: relative;
+}
+
+.wp-block-newebpay-payment-methods.is-editor-preview::before {
+    content: 'Newebpay 付款方式預覽';
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    background: #0073aa;
+    color: white;
+    padding: 2px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    z-index: 1;
 }
 
 .wp-block-newebpay-payment-methods.is-editor-preview .newebpay-payment-method {
     background: white;
     border: 1px solid #ddd;
     cursor: default;
+    transition: all 0.2s ease;
 }
 
 .wp-block-newebpay-payment-methods.is-editor-preview .newebpay-payment-method:hover {
     transform: none;
-    box-shadow: none;
-    border-color: #ddd;
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.1);
+    border-color: #0073aa;
+}
+
+.wp-block-newebpay-payment-methods.is-editor-preview .newebpay-payment-method.preview-mode {
+    opacity: 0.9;
 }
 
 /* 佔位符樣式 */
 .newebpay-block-placeholder {
     text-align: center;
     color: #666;
-    font-style: italic;
-    padding: 2rem;
-    background: #f8f9fa;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border: 2px dashed #dee2e6;
-    border-radius: 8px;
+    border-radius: 12px;
     margin: 1rem 0;
 }
 
-/* 設定面板樣式 */
+.newebpay-block-placeholder h4 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.2rem;
+}
+
+.newebpay-block-placeholder p {
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+/* 載入狀態 */
+.newebpay-block-loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-style: italic;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.newebpay-block-loading::before {
+    content: '⏳ ';
+    margin-right: 0.5rem;
+}
+
+/* 設定面板樣式增強 */
 .components-panel__body h4 {
     margin-bottom: 8px;
     font-weight: 600;
+    color: #1e1e1e;
+}
+
+.components-base-control__help {
+    font-size: 12px;
+    color: #757575;
+    margin-top: 4px;
+}
+
+/* 檢查框樣式 */
+.components-checkbox-control__input[type="checkbox"]:checked {
+    background-color: #0073aa;
+    border-color: #0073aa;
+}
+
+/* 選擇控制項樣式 */
+.components-select-control__input {
+    border-color: #ddd;
+    border-radius: 4px;
+}
+
+.components-select-control__input:focus {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+/* 切換控制項樣式 */
+.components-toggle-control .components-toggle-control__track {
+    background-color: #ddd;
+}
+
+.components-toggle-control.is-checked .components-toggle-control__track {
+    background-color: #0073aa;
+}
+
+/* 編輯器中的格子佈局預覽 */
+.wp-block-newebpay-payment-methods.is-editor-preview.is-layout-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+/* 編輯器中的列表佈局預覽 */
+.wp-block-newebpay-payment-methods.is-editor-preview.is-layout-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* 編輯器中的內聯佈局預覽 */
+.wp-block-newebpay-payment-methods.is-editor-preview.is-layout-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.wp-block-newebpay-payment-methods.is-editor-preview.is-layout-inline .newebpay-payment-method {
+    flex: 0 0 auto;
+    min-width: 200px;
+}
+
+/* 響應式編輯器預覽 */
+@media (max-width: 768px) {
+    .wp-block-newebpay-payment-methods.is-editor-preview.is-layout-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .wp-block-newebpay-payment-methods.is-editor-preview.is-layout-inline {
+        flex-direction: column;
+    }
+    
+    .newebpay-block-placeholder {
+        padding: 2rem 1rem;
+    }
+    
+    .newebpay-block-placeholder h4 {
+        font-size: 1.1rem;
+    }
+}
+
+/* 編輯器中的圖示樣式 */
+.wp-block-newebpay-payment-methods.is-editor-preview .method-icon {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-color: #0073aa;
+}
+
+.wp-block-newebpay-payment-methods.is-editor-preview .method-icon .dashicons {
+    color: #0073aa;
+}
+
+/* 無可用付款方式時的樣式 */
+.components-panel__body p[style*="color: #666"] {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* 編輯器專用的提示訊息 */
+.newebpay-editor-notice {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.newebpay-editor-notice strong {
+    color: #0c5460;
 }
