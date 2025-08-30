@@ -108,21 +108,38 @@ class Newebpay_Blocks {
     public function register_block_types() {
         // 檢查 Gutenberg 支援
         if ( ! function_exists( 'register_block_type' ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'Newebpay Blocks: register_block_type function not available. Gutenberg not supported.' );
+            }
             return;
         }
         
-        // 檢查 WooCommerce 是否啟用
-        if ( ! class_exists( 'WooCommerce' ) ) {
-            return;
+        // 檢查 WooCommerce 是否啟用 - 改為更寬鬆的檢查，允許在沒有 WooCommerce 時也註冊區塊
+        if ( ! function_exists( 'WC' ) && ! class_exists( 'WooCommerce' ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'Newebpay Blocks: WooCommerce not detected. Blocks will still be registered for compatibility.' );
+            }
         }
         
         $registered_count = 0;
         
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'Newebpay Blocks: Starting block registration. Total blocks to register: ' . count( $this->blocks ) );
+        }
+        
         foreach ( $this->blocks as $block_key => $block_config ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( "Newebpay Blocks: Attempting to register block '{$block_key}' with name '{$block_config['name']}'" );
+            }
+            
             // 使用新的 block.json 註冊方式
             $block_json_path = $this->blocks_path . '/blocks/' . $block_key;
             
             if ( file_exists( $block_json_path . '/block.json' ) ) {
+                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                    error_log( "Newebpay Blocks: Found block.json at {$block_json_path}/block.json" );
+                }
+                
                 $result = register_block_type( $block_json_path, array(
                     'render_callback' => $block_config['render_callback']
                 ) );
@@ -132,8 +149,16 @@ class Newebpay_Blocks {
                     if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
                         error_log( "Newebpay Blocks: Successfully registered block '{$block_config['name']}' from block.json" );
                     }
+                } else {
+                    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                        error_log( "Newebpay Blocks: Failed to register block '{$block_config['name']}' from block.json" );
+                    }
                 }
             } else {
+                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                    error_log( "Newebpay Blocks: block.json not found at {$block_json_path}, attempting manual registration" );
+                }
+                
                 // 降級為手動註冊
                 $result = register_block_type( $block_config['name'], array(
                     'attributes' => $block_config['attributes'],
@@ -148,6 +173,10 @@ class Newebpay_Blocks {
                     $registered_count++;
                     if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
                         error_log( "Newebpay Blocks: Successfully registered block '{$block_config['name']}' manually" );
+                    }
+                } else {
+                    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                        error_log( "Newebpay Blocks: Failed to register block '{$block_config['name']}' manually" );
                     }
                 }
             }
@@ -168,9 +197,28 @@ class Newebpay_Blocks {
      * 載入編輯器資源
      */
     public function enqueue_block_editor_assets() {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( "Newebpay Blocks: Enqueuing block editor assets" );
+            error_log( "Newebpay Blocks: Assets URL: " . $this->assets_url );
+        }
+        
+        $editor_js_path = $this->assets_url . '/js/blocks-editor.js';
+        $editor_css_path = $this->assets_url . '/css/blocks-editor.css';
+        
+        // 檢查檔案是否存在
+        $editor_js_file = str_replace( $this->plugin_url, $this->plugin_path, $editor_js_path );
+        $editor_css_file = str_replace( $this->plugin_url, $this->plugin_path, $editor_css_path );
+        
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( "Newebpay Blocks: Editor JS file path: " . $editor_js_file );
+            error_log( "Newebpay Blocks: Editor JS exists: " . ( file_exists( $editor_js_file ) ? 'Yes' : 'No' ) );
+            error_log( "Newebpay Blocks: Editor CSS file path: " . $editor_css_file );
+            error_log( "Newebpay Blocks: Editor CSS exists: " . ( file_exists( $editor_css_file ) ? 'Yes' : 'No' ) );
+        }
+        
         wp_enqueue_script(
             'newebpay-blocks-editor',
-            $this->assets_url . '/js/blocks-editor.js',
+            $editor_js_path,
             array( 'wp-blocks', 'wp-i18n', 'wp-element', 'wp-editor', 'wp-components' ),
             '1.0.10',
             true
@@ -178,18 +226,24 @@ class Newebpay_Blocks {
         
         wp_enqueue_style(
             'newebpay-blocks-editor',
-            $this->assets_url . '/css/blocks-editor.css',
+            $editor_css_path,
             array( 'wp-edit-blocks' ),
             '1.0.10'
         );
         
         // 傳遞資料給 JavaScript
-        wp_localize_script( 'newebpay-blocks-editor', 'newebpayBlocks', array(
+        $localize_data = array(
             'nonce' => wp_create_nonce( 'newebpay_blocks_nonce' ),
             'apiUrl' => rest_url( 'newebpay/v1/' ),
             'blocks' => $this->blocks,
             'availableMethods' => $this->get_available_payment_methods()
-        ) );
+        );
+        
+        wp_localize_script( 'newebpay-blocks-editor', 'newebpayBlocks', $localize_data );
+        
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( "Newebpay Blocks: Successfully enqueued editor assets and localized data" );
+        }
     }
     
     /**
@@ -219,16 +273,37 @@ class Newebpay_Blocks {
      * 新增區塊分類
      */
     public function add_block_category( $categories, $post ) {
-        return array_merge(
-            $categories,
-            array(
-                array(
-                    'slug' => 'newebpay',
-                    'title' => __( 'Newebpay Payment', 'newebpay-payment' ),
-                    'icon' => 'money-alt',
-                ),
-            )
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( "Newebpay Blocks: Adding block category" );
+        }
+        
+        $newebpay_category = array(
+            'slug' => 'newebpay',
+            'title' => __( 'Newebpay Payment', 'newebpay-payment' ),
+            'icon' => 'money-alt',
         );
+        
+        // 檢查類別是否已存在
+        $category_exists = false;
+        foreach ( $categories as $category ) {
+            if ( isset( $category['slug'] ) && $category['slug'] === 'newebpay' ) {
+                $category_exists = true;
+                break;
+            }
+        }
+        
+        if ( ! $category_exists ) {
+            $categories[] = $newebpay_category;
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( "Newebpay Blocks: Successfully added block category 'newebpay'" );
+            }
+        } else {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( "Newebpay Blocks: Block category 'newebpay' already exists" );
+            }
+        }
+        
+        return $categories;
     }
     
     /**
