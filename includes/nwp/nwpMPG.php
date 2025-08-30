@@ -233,8 +233,23 @@ class WC_newebpay extends baseNwpMPG
         // add_filter( 'woocommerce_thankyou_page', array( $this, 'thankyou_page' ) ); // 商店付款完成頁面
         add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text'));
         
-        // 添加付款完成時清空購物車的 hook
-        add_action('woocommerce_payment_complete', array($this, 'on_payment_complete'), 10, 1);
+        // 註冊購物車管理的 hooks
+        add_action('woocommerce_payment_complete', array($this, 'on_payment_complete'));
+        add_action('woocommerce_order_status_processing', array($this, 'on_order_status_processing'));
+        add_action('woocommerce_order_status_failed', array($this, 'on_order_status_failed'));
+        
+        // 控制重試付款按鈕的顯示
+        add_filter('woocommerce_my_account_my_orders_actions', array($this, 'filter_retry_payment_actions'), 10, 2);
+        add_filter('woocommerce_valid_order_statuses_for_payment_complete', array($this, 'filter_payment_complete_statuses'), 10, 2);
+        // 暫時禁用這個 filter，可能影響正常付款流程
+        // add_filter('woocommerce_order_needs_payment', array($this, 'filter_order_needs_payment'), 10, 3);
+        
+        // 只使用一個方式來顯示重試按鈕 - 移除重複的 hooks
+        // add_action('woocommerce_thankyou_' . $this->id, array($this, 'thankyou_page_actions'), 20);
+        // add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text_with_retry'), 20, 2);
+        
+        // add_filter( 'woocommerce_thankyou_page', array( $this, 'thankyou_page' ) ); // 商店付款完成頁面
+        add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text'));
     }
 
     /**
@@ -305,11 +320,66 @@ class WC_newebpay extends baseNwpMPG
             'LangType'        => $this->LangType,
         );
 
-        // 從訂單 meta 資料取得選擇的支付方式
-        $selected_payment = $order->get_meta('_nwpSelectedPayment');
+        // 取得用戶選擇的支付方式
+        $selected_payment = '';
+        
+        // 1. 首先檢查當前類別中是否有選擇的支付方式
+        if (!empty($this->nwpSelectedPayment)) {
+            $selected_payment = $this->nwpSelectedPayment;
+        }
+        
+        // 2. 如果沒有當前選擇，嘗試從訂單 meta 資料取得之前的選擇
+        if (empty($selected_payment)) {
+            $selected_payment = $order->get_meta('_nwpSelectedPayment');
+        }
+        
+        // 取得後台設定的啟用支付方式，用於驗證選擇是否有效
+        $get_select_payment = $this->get_selected_payment();
+        
+        // 驗證選擇的支付方式是否在後台設定中啟用
+        $is_valid_payment = false;
         if (!empty($selected_payment)) {
-            // 智慧ATM2.0 特殊處理 - 使用 VACC 參數加上額外參數
-            if ($selected_payment === 'SmartPay') {
+            // 建立支付方式對應表（小寫 -> 設定欄位名稱）
+            $payment_config_map = array(
+                'credit' => 'Credit',
+                'webatm' => 'Webatm',
+                'vacc' => 'Vacc',
+                'cvs' => 'CVS',
+                'barcode' => 'BARCODE',
+                'linepay' => 'LinePay',
+                'esunwallet' => 'EsunWallet',
+                'taiwanpay' => 'TaiwanPay',
+                'androidpay' => 'AndroidPay',
+                'samsungpay' => 'SamsungPay',
+                'applepay' => 'APPLEPAY',
+                'smartpay' => 'SmartPay'
+            );
+            
+            $payment_config_key = $payment_config_map[$selected_payment] ?? strtoupper($selected_payment);
+            $is_valid_payment = isset($get_select_payment[$payment_config_key]) && $get_select_payment[$payment_config_key] == '1';
+        }
+        
+        // 如果選擇的支付方式無效或沒有選擇，使用第一個啟用的支付方式
+        if (!$is_valid_payment) {
+            $payment_priority = array('Credit', 'AndroidPay', 'SamsungPay', 'LinePay', 'EsunWallet', 'TaiwanPay', 'Webatm', 'Vacc', 'CVS', 'BARCODE');
+            
+            foreach ($payment_priority as $payment_method) {
+                if (isset($get_select_payment[$payment_method]) && $get_select_payment[$payment_method] == '1') {
+                    $selected_payment = strtolower($payment_method);
+                    break;
+                }
+            }
+        }
+        
+        // 添加訂單備註記錄使用的支付方式
+        if (!empty($selected_payment)) {
+            $order->add_order_note("使用支付方式: " . $selected_payment, 0);
+        }
+        
+        // 只設定用戶選擇的支付方式
+        if (!empty($selected_payment)) {
+            // 智慧ATM2.0 特殊處理
+            if ($selected_payment === 'smartpay') {
                 $post_data['VACC'] = 1;
                 
                 // 取得智慧ATM2.0的設定參數
@@ -332,8 +402,6 @@ class WC_newebpay extends baseNwpMPG
                 $post_data[strtoupper($selected_payment)] = 1;
             }
         }
-
-        $get_select_payment = $this->get_selected_payment();
 
         $cvscom_payed = $get_select_payment['CVSCOMPayed'] ?? '';
         
@@ -387,9 +455,9 @@ class WC_newebpay extends baseNwpMPG
         $itemdesc  = '';
         foreach ($item_name as $item_value) {
             if ($item_cnt != count($item_name)) {
-                $itemdesc .= $item_value->get_name() . ' × ' . $item_value->get_quantity() . '，';
+                $itemdesc .= $item_value->get_name() . ' x ' . $item_value->get_quantity() . '，';
             } elseif ($item_cnt == count($item_name)) {
-                $itemdesc .= $item_value->get_name() . ' × ' . $item_value->get_quantity();
+                $itemdesc .= $item_value->get_name() . ' x ' . $item_value->get_quantity();
             }
 
             $item_cnt++;
@@ -425,8 +493,7 @@ class WC_newebpay extends baseNwpMPG
         if (!empty($req_data['MerchantOrderNo']) && sanitize_text_field($_GET['key']) != '' && preg_match('/^wc_order_/', sanitize_text_field($_GET['key']))) {
             $order_id = wc_get_order_id_by_order_key(sanitize_text_field($_GET['key']));
             $order    = wc_get_order($order_id);   // 原$_REQUEST['order-received']
-            $order->set_transaction_id($req_data['TradeNo']);
-            $order->save();
+            // 註：transaction_id 只在付款成功時設定，避免 WooCommerce 誤判需要重新付款
         }
 
         if (empty($order)) {
@@ -435,11 +502,15 @@ class WC_newebpay extends baseNwpMPG
         }
 
         if (empty($req_data['PaymentType']) || empty($req_data['Status'])) {
-            return '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
-            exit();
+            // 如果訂單狀態是 failed，不顯示錯誤訊息，後面會有重試區塊
+            if (isset($order) && $order && $order->get_status() === 'failed') {
+                $result = ''; // 空的結果，後面會添加重試區塊
+            } else {
+                return '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+            }
+        } else {
+            $result = '付款方式：' . esc_attr($this->get_payment_type_str($req_data['PaymentType'], !empty($req_data['P2GPaymentType']))) . '<br>';
         }
-
-        $result = '付款方式：' . esc_attr($this->get_payment_type_str($req_data['PaymentType'], !empty($req_data['P2GPaymentType']))) . '<br>';
         switch ($req_data['PaymentType']) {
             case 'CREDIT':
             case 'WEBATM':
@@ -448,7 +519,8 @@ class WC_newebpay extends baseNwpMPG
                 if ($req_data['Status'] == 'SUCCESS') {
                     $result .= '交易成功<br>';
                 } else {
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    // 失敗時不顯示錯誤訊息，後面會有統一的重試區塊
+                    // $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
             case 'VACC':
@@ -458,6 +530,11 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '銀行代碼：' . esc_attr($req_data['BankCode']) . '<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
+                    // 設定訂單狀態為失敗，以便顯示重試付款選項
+                    $order->update_status('failed', sprintf(
+                        __('Payment failed via Newebpay. Error: %s', 'newebpay-payment'),
+                        esc_attr(urldecode($req_data['Message']))
+                    ));
                     $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
@@ -466,6 +543,11 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '取號成功<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
+                    // 設定訂單狀態為失敗，以便顯示重試付款選項
+                    $order->update_status('failed', sprintf(
+                        __('Payment failed via Newebpay. Error: %s', 'newebpay-payment'),
+                        esc_attr(urldecode($req_data['Message']))
+                    ));
                     $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
@@ -518,51 +600,120 @@ class WC_newebpay extends baseNwpMPG
                 $order->add_order_note(__('Payment failed within paid order', 'newebpay-payment'));
                 $order->save();
             } else {
+                // 清除 transaction_id 以確保可以重試付款
+                $order->set_transaction_id('');
                 $order->update_status('failed', sprintf(
                     __('Payment failed: %1$s (%2$s)', 'newebpay-payment'),
                     $req_data['Status'],
                     $req_data['Message']
                 ));
+                
+                // 添加調試日誌
+                if (function_exists('wc_get_logger')) {
+                    $logger = wc_get_logger();
+                    $logger->info('Payment failed - transaction_id cleared, status set to failed', array(
+                        'source' => 'newebpay-payment', 
+                        'order_id' => $order->get_id(),
+                        'transaction_id' => $order->get_transaction_id(),
+                        'status' => $order->get_status()
+                    ));
+                }
             }
         } else {
             // 付款成功處理
+            $previous_status = $order->get_status();
+            
+            // 設定交易編號 - 只在付款成功時設定
+            $order->set_transaction_id($req_data['TradeNo']);
             $order->update_status('processing');
             
-            // 清空購物車 - 只有在付款成功且購物車不為空時才清空
-            if (WC()->cart && !WC()->cart->is_empty()) {
-                WC()->cart->empty_cart();
+            // 如果訂單之前是失敗狀態，添加備註記錄恢復
+            if ($previous_status === 'failed') {
+                $order->add_order_note(__('Payment succeeded after previous failure - order recovered', 'newebpay-payment'));
             }
-            
-            // 如果是訪客結帳，嘗試自動登入 (如果用戶帳號存在)
-            if (!is_user_logged_in()) {
-                $user_email = $order->get_billing_email();
-                if (!empty($user_email)) {
-                    $user = get_user_by('email', $user_email);
-                    if ($user && !is_wp_error($user)) {
-                        wp_set_current_user($user->ID);
-                        wp_set_auth_cookie($user->ID, true);
-                        
-                        // 添加訂單備註記錄自動登入
-                        $order->add_order_note(__('Customer automatically logged in after payment', 'newebpay-payment'));
-                    }
-                }
-            } else {
-                // 如果已經登入但訂單的用戶 ID 不一致，更新訂單的客戶 ID
-                $current_user_id = get_current_user_id();
-                $order_user_id = $order->get_user_id();
-                
-                if ($order_user_id == 0 && $current_user_id > 0) {
-                    // 如果訂單是訪客訂單但現在有登入用戶，將訂單關聯到該用戶
-                    $user_email = $order->get_billing_email();
-                    $current_user_email = wp_get_current_user()->user_email;
+        }
+        
+        // 自動登入處理 - 無論付款成功或失敗都執行，讓用戶能管理訂單和購物車
+        if (!is_user_logged_in()) {
+            $user_email = $order->get_billing_email();
+            if (!empty($user_email)) {
+                $user = get_user_by('email', $user_email);
+                if ($user && !is_wp_error($user)) {
+                    wp_set_current_user($user->ID);
+                    wp_set_auth_cookie($user->ID, true);
                     
-                    if ($user_email === $current_user_email) {
-                        $order->set_customer_id($current_user_id);
-                        $order->save();
-                        $order->add_order_note(__('Order linked to logged-in customer after payment', 'newebpay-payment'));
-                    }
+                    // 添加訂單備註記錄自動登入
+                    $login_note = ($req_data['Status'] == 'SUCCESS') 
+                        ? 'Customer automatically logged in after payment' 
+                        : 'Customer automatically logged in after checkout';
+                    $order->add_order_note(__($login_note, 'newebpay-payment'));
                 }
             }
+        } else {
+            // 如果已經登入但訂單的用戶 ID 不一致，更新訂單的客戶 ID
+            $current_user_id = get_current_user_id();
+            $order_user_id = $order->get_user_id();
+            
+            if ($order_user_id == 0 && $current_user_id > 0) {
+                // 如果訂單是訪客訂單但現在有登入用戶，將訂單關聯到該用戶
+                $user_email = $order->get_billing_email();
+                $current_user_email = wp_get_current_user()->user_email;
+                
+                if ($user_email === $current_user_email) {
+                    $order->set_customer_id($current_user_id);
+                    $order->save();
+                    $link_note = ($req_data['Status'] == 'SUCCESS') 
+                        ? 'Order linked to logged-in customer after payment' 
+                        : 'Order linked to logged-in customer after checkout';
+                    $order->add_order_note(__($link_note, 'newebpay-payment'));
+                }
+            }
+        }
+        
+        // 如果訂單狀態是 failed 且沒有 transaction_id，添加重試付款按鈕
+        if (isset($order) && $order && 
+            $order->get_status() === 'failed' && 
+            empty($order->get_transaction_id())) {
+            
+            $checkout_payment_url = $order->get_checkout_payment_url();
+            if ($checkout_payment_url) {
+                $result .= '<div class="woocommerce-order-retry-payment" style="margin: 20px 0; padding: 20px; background: #fff; border: 1px solid #e74c3c; border-radius: 5px; text-align: center;">';
+                $result .= '<h4 style="color: #e74c3c; margin: 0 0 15px 0; font-size: 18px;">💳 付款失敗</h4>';
+                $result .= '<p style="margin: 0 0 20px 0; color: #666;">您的付款沒有成功完成，請重新嘗試付款。</p>';
+                $result .= '<a href="' . esc_url($checkout_payment_url) . '" class="button alt wc-retry-payment" style="background-color: #e74c3c; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; border: none; cursor: pointer; transition: all 0.3s ease;">🔄 再試一次付款</a>';
+                $result .= '</div>';
+            }
+        }
+        
+        // 如果訂單已完成付款，隱藏所有重試相關的按鈕和連結
+        if (isset($order) && $order && 
+            !empty($order->get_transaction_id()) && 
+            in_array($order->get_status(), array('processing', 'completed'))) {
+            
+            // 使用 WordPress 標準方式添加 JavaScript
+            add_action('wp_footer', function() {
+                ?>
+                <script type="text/javascript">
+                jQuery(document).ready(function($) {
+                    // 隱藏所有可能的重試付款按鈕和連結
+                    $(".woocommerce-order-actions .button:contains('重試')").hide();
+                    $(".woocommerce-order-actions .button:contains('retry')").hide();
+                    $(".woocommerce-order-actions .button:contains('再試一次')").hide();
+                    $(".woocommerce-order-actions .button:contains('pay')").hide();
+                    $(".woocommerce-order-actions .button:contains('付款')").hide();
+                    $("a[href*='order-pay']").each(function() {
+                        if ($(this).text().indexOf('重試') !== -1 || 
+                            $(this).text().indexOf('retry') !== -1 || 
+                            $(this).text().indexOf('再試一次') !== -1 ||
+                            $(this).text().indexOf('pay') !== -1 ||
+                            $(this).text().indexOf('付款') !== -1) {
+                            $(this).hide();
+                        }
+                    });
+                });
+                </script>
+                <?php
+            });
         }
 
         return $result;
@@ -617,15 +768,27 @@ class WC_newebpay extends baseNwpMPG
             case 'P2GEACC':
             case 'ACCLINK':
                 if ($req_data['Status'] == 'SUCCESS') {
+                    $previous_status = $order->get_status();
+                    
+                    // 設定交易編號 - 只在付款成功時設定
+                    $order->set_transaction_id($req_data['TradeNo']);
                     $order->update_status('processing');
                     
-                    // 清空購物車 - 只有在付款成功且購物車不為空時才清空
-                    if (WC()->cart && !WC()->cart->is_empty()) {
-                        WC()->cart->empty_cart();
+                    // 如果訂單之前是失敗狀態，添加備註記錄恢復
+                    if ($previous_status === 'failed') {
+                        $order->add_order_note(__('Payment succeeded after previous failure - order recovered', 'newebpay-payment'));
                     }
                     
                     $result .= '交易成功<br>';
                 } else {
+                    // 付款失敗，清除 transaction_id 並設定訂單狀態為 failed 以便顯示重試選項
+                    $order->set_transaction_id('');
+                    $order->update_status('failed', sprintf(
+                        __('Payment failed via Newebpay. Status: %s, Message: %s', 'newebpay-payment'),
+                        $req_data['Status'],
+                        urldecode($req_data['Message'])
+                    ));
+                    
                     $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
@@ -635,6 +798,13 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '銀行代碼：' . esc_attr($req_data['BankCode']) . '<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
+                    // 取號失敗，設定訂單狀態為 failed
+                    $order->update_status('failed', sprintf(
+                        __('Virtual account creation failed via Newebpay. Status: %s, Message: %s', 'newebpay-payment'),
+                        $req_data['Status'],
+                        urldecode($req_data['Message'])
+                    ));
+                    
                     $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
@@ -786,7 +956,9 @@ class WC_newebpay extends baseNwpMPG
         // 檢查回傳狀態是否為成功
         if (!in_array($re_Status, array('SUCCESS', 'CUSTOM'))) {
             $msg = '訂單處理失敗: ';
-            $order->update_status('cancelled');
+            // 清除 transaction_id 以確保可以重試付款
+            $order->set_transaction_id('');
+            $order->update_status('failed');
             $msg .= urldecode($req_data['Message']);
             $order->add_order_note(__($msg, 'woothemes'));
             echo esc_attr($msg);
@@ -796,7 +968,9 @@ class WC_newebpay extends baseNwpMPG
         // 檢查是否付款
         if (empty($req_data['PayTime'])) {
             $msg = '訂單並未付款';
-            $order->update_status('cancelled');
+            // 清除 transaction_id 以確保可以重試付款
+            $order->set_transaction_id('');
+            $order->update_status('failed');
             echo esc_attr($msg);
             exit; // 一定要有離開，才會被正常執行
         };
@@ -804,7 +978,9 @@ class WC_newebpay extends baseNwpMPG
         // 檢查金額是否一樣
         if ($Amt != $re_Amt) {
             $msg = '金額不一致';
-            $order->update_status('cancelled');
+            // 清除 transaction_id 以確保可以重試付款
+            $order->set_transaction_id('');
+            $order->update_status('failed');
             echo esc_attr($msg);
             exit();
         }
@@ -831,11 +1007,6 @@ class WC_newebpay extends baseNwpMPG
 
         // 全部確認過後，修改訂單狀態(處理中，並寄通知信)
         $order->update_status('processing');
-        
-        // 清空購物車 - 只有在付款成功且購物車不為空時才清空
-        if (WC()->cart && !WC()->cart->is_empty()) {
-            WC()->cart->empty_cart();
-        }
         
         $msg   = '訂單修改成功';
         $eiChk = $this->eiChk;
@@ -999,15 +1170,21 @@ class WC_newebpay extends baseNwpMPG
         $szHtml         = '';
         $szHtml        .= '付款方式 : ';
         $szHtml        .= '<select name="nwp_selected_payments">';
+
         foreach ($payment_method as $payment_method => $value) {
             if ($payment_method == 'CVSCOMNotPayed') {
                 $cvscom_not_payed = 1;
+                continue;
+            }
+            // 暫時隱藏超商取貨付款選項
+            if ($payment_method == 'CVSCOMPayed') {
                 continue;
             }
             // 測試模式暫不開放 WechatPay 和 Alipay
             if ($this->settings['TestMode'] == 'yes' && in_array($payment_method, array('EZPWECHAT', 'EZPALIPAY'))) {
                 continue;
             }
+
             $szHtml .= '<option value="' . esc_attr($payment_method) . '">';
             $szHtml .= esc_html($this->convert_payment($payment_method));
             $szHtml .= '</option>';
@@ -1094,11 +1271,6 @@ class WC_newebpay extends baseNwpMPG
             error_log( 'Newebpay: Found payment methods: ' . print_r( $payment_method, true ) );
         }
 
-        // Debug: 記錄找到的付款方式（僅在 Debug 模式下）
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-            error_log( 'Newebpay: Found payment methods: ' . print_r( $payment_method, true ) );
-        }
-
         return $payment_method;
     }
 
@@ -1149,15 +1321,133 @@ class WC_newebpay extends baseNwpMPG
     /**
      * 處理付款完成事件，確保購物車被清空
      */
+    /**
+     * 控制重試付款按鈕的顯示
+     */
+    public function filter_retry_payment_actions($actions, $order)
+    {
+        // 只處理藍新金流的訂單
+        if ($order->get_payment_method() !== 'newebpay') {
+            return $actions;
+        }
+        
+        // 如果訂單已經有 transaction_id（表示曾經付款成功），移除重試選項
+        if (!empty($order->get_transaction_id())) {
+            unset($actions['pay']);
+            return $actions;
+        }
+        
+        // 如果訂單狀態不是 failed 或 pending（需要付款的狀態），移除重試選項
+        if (!in_array($order->get_status(), array('failed', 'pending'))) {
+            unset($actions['pay']);
+            return $actions;
+        }
+        
+        // 只有當訂單狀態為 failed 且沒有 transaction_id 時，才顯示重試按鈕
+        return $actions;
+    }
+    
+    /**
+     * 控制訂單是否需要付款
+     */
+    public function filter_order_needs_payment($needs_payment, $order, $valid_statuses)
+    {
+        // 只處理藍新金流的訂單
+        if ($order->get_payment_method() !== 'newebpay') {
+            return $needs_payment;
+        }
+        
+        // 只有在訂單已經成功付款的情況下才阻止重新付款
+        // 檢查訂單是否已經成功完成或正在處理中，且有 transaction_id
+        if (!empty($order->get_transaction_id()) && 
+            in_array($order->get_status(), array('processing', 'completed'))) {
+            return false;
+        }
+        
+        return $needs_payment;
+    }
+    
+    /**
+     * 控制付款完成的有效狀態
+     */
+    public function filter_payment_complete_statuses($statuses, $order)
+    {
+        // 只處理藍新金流的訂單
+        if ($order && $order->get_payment_method() === 'newebpay') {
+            // 確保 processing 和 completed 狀態被認為是付款完成狀態
+            if (!in_array('processing', $statuses)) {
+                $statuses[] = 'processing';
+            }
+            if (!in_array('completed', $statuses)) {
+                $statuses[] = 'completed';
+            }
+        }
+        
+        return $statuses;
+    }
+    
+    /**
+     * 當付款完成時的處理
+     */
     public function on_payment_complete($order_id)
+    {
+        $order = wc_get_order($order_id);
+        
+        // 只處理藍新金流的訂單且訂單狀態為已完成/處理中
+        if ($order && 
+            $order->get_payment_method() === 'newebpay' && 
+            in_array($order->get_status(), array('processing', 'completed')) &&
+            $order->is_paid()) {
+            
+            // 清空購物車 - 只有在購物車不為空時才清空
+            if (WC()->cart && !WC()->cart->is_empty()) {
+                WC()->cart->empty_cart();
+                
+                // 添加日誌以便調試
+                if (function_exists('wc_get_logger')) {
+                    $logger = wc_get_logger();
+                    $logger->info('Cart emptied after successful payment', array('source' => 'newebpay-payment', 'order_id' => $order_id));
+                }
+            }
+        }
+    }
+    
+    /**
+     * 當訂單狀態變為 processing 時的處理
+     */
+    public function on_order_status_processing($order_id)
     {
         $order = wc_get_order($order_id);
         
         // 只處理藍新金流的訂單
         if ($order && $order->get_payment_method() === 'newebpay') {
-            // 清空購物車 - 只有在購物車不為空時才清空
+            // 確保購物車被清空（成功付款的後備處理）
             if (WC()->cart && !WC()->cart->is_empty()) {
                 WC()->cart->empty_cart();
+                
+                // 添加日誌以便調試
+                if (function_exists('wc_get_logger')) {
+                    $logger = wc_get_logger();
+                    $logger->info('Cart emptied when order status changed to processing', array('source' => 'newebpay-payment', 'order_id' => $order_id));
+                }
+            }
+        }
+    }
+    
+    /**
+     * 當訂單狀態變為 failed 時的處理
+     */
+    public function on_order_status_failed($order_id)
+    {
+        $order = wc_get_order($order_id);
+        
+        // 只處理藍新金流的訂單
+        if ($order && $order->get_payment_method() === 'newebpay') {
+            // 失敗時不清空購物車，保留商品讓用戶重試
+            // 添加日誌以便調試
+            if (function_exists('wc_get_logger')) {
+                $logger = wc_get_logger();
+                $logger->info('Order failed - cart preserved for retry', array('source' => 'newebpay-payment', 'order_id' => $order_id));
             }
         }
     }
