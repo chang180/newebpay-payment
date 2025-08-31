@@ -160,6 +160,80 @@ class Newebpay_WooCommerce_Blocks_Integration {
             'callback' => array( $this, 'rest_get_payment_methods' ),
             'permission_callback' => '__return_true'
         ) );
+
+        // 管理員用：比較不同來源的付款方式（設定、WC_newebpay 內部解析、Blocks 產出）
+        register_rest_route( 'newebpay/v1', '/admin/compare-payment-methods', array(
+            'methods' => 'GET',
+            'callback' => array( $this, 'rest_admin_compare_payment_methods' ),
+            'permission_callback' => function() {
+                return current_user_can( 'manage_options' );
+            }
+        ) );
+    }
+
+    /**
+     * 管理員用 REST: 比較設定來源、WC_newebpay 的選擇結果（透過 reflection 嘗試）以及 Blocks 回傳
+     */
+    public function rest_admin_compare_payment_methods( $request ) {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return new WP_REST_Response( array( 'success' => false, 'message' => 'forbidden' ), 403 );
+        }
+
+        // 來源 A: 直接從設定解析
+        $nwp_settings = get_option( 'woocommerce_newebpay_settings' );
+        $selected_from_settings = array();
+        if ( is_array( $nwp_settings ) ) {
+            foreach ( $nwp_settings as $key => $value ) {
+                if ( strpos( $key, 'NwpPaymentMethod' ) !== false && $value === 'yes' ) {
+                    $selected_from_settings[ str_replace( 'NwpPaymentMethod', '', $key ) ] = 1;
+                }
+            }
+        }
+
+        // 來源 B: 嘗試使用 WC_newebpay 的內部解析 (private method) via Reflection
+        $selected_from_wc = array();
+        if ( class_exists( 'WC_newebpay' ) ) {
+            try {
+                $wc = new WC_newebpay();
+                if ( method_exists( $wc, 'get_selected_payment' ) || ( new ReflectionClass( $wc ) )->hasMethod( 'get_selected_payment' ) ) {
+                    $ref = new ReflectionMethod( $wc, 'get_selected_payment' );
+                    $ref->setAccessible( true );
+                    $selected_from_wc = (array) $ref->invoke( $wc );
+                }
+            } catch ( Exception $e ) {
+                // reflection 失敗時退回空陣列
+                $selected_from_wc = array();
+            }
+        }
+
+        // 來源 C: Blocks REST 產出
+        $blocks_methods = $this->get_payment_methods_for_rest();
+        $blocks_ids = array();
+        foreach ( $blocks_methods as $m ) {
+            if ( isset( $m['id'] ) ) {
+                $blocks_ids[] = $m['id'];
+            }
+        }
+
+        // 計算差異
+        $settings_keys = array_values( array_map( 'strval', array_keys( $selected_from_settings ) ) );
+        $wc_keys = array_values( array_map( 'strval', array_keys( $selected_from_wc ) ) );
+
+        $missing_in_blocks = array_values( array_diff( $settings_keys, $blocks_ids ) );
+        $missing_in_settings = array_values( array_diff( $blocks_ids, $settings_keys ) );
+        $missing_in_wc = array_values( array_diff( $settings_keys, $wc_keys ) );
+
+        return new WP_REST_Response( array(
+            'success' => true,
+            'source_settings' => array_values( $settings_keys ),
+            'source_wc' => array_values( $wc_keys ),
+            'source_blocks' => $blocks_ids,
+            'differences' => array(
+                'missing_in_blocks' => $missing_in_blocks,
+                'missing_in_settings' => $missing_in_settings,
+                'missing_in_wc' => $missing_in_wc,
+            ),
+        ), 200 );
     }
     
     /**
@@ -167,11 +241,19 @@ class Newebpay_WooCommerce_Blocks_Integration {
      */
     public function rest_get_payment_methods( $request ) {
         $methods = $this->get_payment_methods_for_rest();
-        
+
+        // 讀取是否支援 CVSCOMNotPayed（超商取貨不付款）
+        $nwp_settings = get_option( 'woocommerce_newebpay_settings' );
+        $cvscom_not_payed = false;
+        if ( is_array( $nwp_settings ) && isset( $nwp_settings['NwpPaymentMethodCVSCOMNotPayed'] ) && $nwp_settings['NwpPaymentMethodCVSCOMNotPayed'] === 'yes' ) {
+            $cvscom_not_payed = true;
+        }
+
         return new WP_REST_Response( array(
             'success' => true,
             'data' => $methods,
             'count' => count( $methods ),
+            'cvscom_not_payed' => $cvscom_not_payed,
             'source' => 'rest_api',
             'version' => '1.0.10'
         ), 200 );
@@ -181,38 +263,99 @@ class Newebpay_WooCommerce_Blocks_Integration {
      * 為 REST API 取得付款方式
      */
     private function get_payment_methods_for_rest() {
-        // 取得 Newebpay 設定
-        $nwp_settings = get_option( 'woocommerce_newebpay_settings' );
-        
-        if ( ! $nwp_settings || ! is_array( $nwp_settings ) ) {
-            return array();
-        }
-        
-        // 檢查基本設定
-        $required_settings = array( 'MerchantID', 'HashKey', 'HashIV' );
-        foreach ( $required_settings as $setting ) {
-            if ( empty( $nwp_settings[ $setting ] ) ) {
+        // 優先使用傳統 WC_newebpay 的 get_selected_payment() 結果，確保與 order-pay 行為一致
+        if ( class_exists( 'WC_newebpay' ) ) {
+            // 不能呼叫 WC_newebpay::get_selected_payment()（private），改用同樣的解析設定邏輯
+            $nwp_settings = get_option( 'woocommerce_newebpay_settings' );
+            if ( ! $nwp_settings || ! is_array( $nwp_settings ) ) {
                 return array();
             }
-        }
-        
-        $methods = array();
-        $all_methods = $this->get_all_payment_methods_for_rest();
-        
-        foreach ( $all_methods as $key => $method ) {
-            // 檢查該付款方式是否啟用
-            $setting_key = $this->get_payment_method_setting_key_for_rest( $key );
-            if ( isset( $nwp_settings[ $setting_key ] ) && $nwp_settings[ $setting_key ] === 'yes' ) {
-                $methods[ $key ] = array_merge( $method, array(
-                    'id' => $key,
-                    'enabled' => true,
-                    'setting_key' => $setting_key
-                ) );
+
+            $selected = array();
+            foreach ( $nwp_settings as $row => $value ) {
+                if ( strpos( $row, 'NwpPaymentMethod' ) !== false && $value === 'yes' ) {
+                    $method_key = str_replace( 'NwpPaymentMethod', '', $row );
+                    $selected[ $method_key ] = 1;
+                }
             }
+
+            if ( empty( $selected ) ) {
+                return array();
+            }
+
+            // 顯示名稱對應（參考 nwpMPG::convert_payment）
+            $names = array(
+                'Credit'     => '信用卡一次付清',
+                'AndroidPay' => 'Google Pay',
+                'SamsungPay' => 'Samsung Pay',
+                'LinePay'    => 'Line Pay',
+                'Inst'       => '信用卡分期',
+                'CreditRed'  => '信用卡紅利',
+                'UnionPay'   => '銀聯卡',
+                'Webatm'     => 'WEBATM',
+                'Vacc'       => 'ATM轉帳',
+                'CVS'        => '超商代碼',
+                'BARCODE'    => '超商條碼',
+                'EsunWallet' => '玉山 Wallet',
+                'TaiwanPay'  => '台灣 Pay',
+                'BitoPay'    => 'BitoPay',
+                'EZPWECHAT'  => '微信支付',
+                'EZPALIPAY'  => '支付寶',
+                'APPLEPAY'   => 'Apple Pay',
+                'SmartPay'   => '智慧ATM2.0',
+                'TWQR'       => 'TWQR',
+                'CVSCOMPayed' => '超商取貨付款',
+                'CVSCOMNotPayed' => '超商取貨不付款',
+            );
+
+            $methods = array();
+            // 前端 ID 映射（保持向後相容）
+            $frontend_map = array(
+                'Credit' => 'credit',
+                'AndroidPay' => 'googlepay',
+                'SamsungPay' => 'samsungpay',
+                'LinePay' => 'linepay',
+                'Inst' => 'installment',
+                'CreditRed' => 'creditred',
+                'UnionPay' => 'unionpay',
+                'Webatm' => 'webatm',
+                'Vacc' => 'vacc',
+                'CVS' => 'cvs',
+                'BARCODE' => 'barcode',
+                'EsunWallet' => 'esunwallet',
+                'TaiwanPay' => 'taiwanpay',
+                'BitoPay' => 'bitopay',
+                'EZPWECHAT' => 'wechat',
+                'EZPALIPAY' => 'alipay',
+                'APPLEPAY' => 'applepay',
+                'SmartPay' => 'smartpay',
+                'TWQR' => 'twqr',
+                'CVSCOMPayed' => 'cvscom',
+                'CVSCOMNotPayed' => 'cvscom_not_payed',
+            );
+
+            foreach ( $selected as $method_key => $v ) {
+                // 跳過不付款選項
+                if ( $method_key === 'CVSCOMNotPayed' ) {
+                    continue;
+                }
+
+                $frontend_id = isset( $frontend_map[ $method_key ] ) ? $frontend_map[ $method_key ] : strtolower( $method_key );
+
+                $methods[] = array(
+                    'name' => isset( $names[ $method_key ] ) ? $names[ $method_key ] : $method_key,
+                    'description' => '',
+                    'id' => $method_key,
+                    'frontend_id' => $frontend_id,
+                    'enabled' => true,
+                    'setting_key' => 'NwpPaymentMethod' . $method_key,
+                );
+            }
+
+            return $methods;
         }
-        
-        // 轉換關聯陣列為數字索引陣列
-        return array_values( $methods );
+
+        return array();
     }
     
     /**

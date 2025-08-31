@@ -152,7 +152,7 @@ class WC_newebpay extends baseNwpMPG
         $this->id  = 'newebpay';
         $this->icon = apply_filters('woocommerce_newebpay_icon', plugins_url('icon/newebpay.png', dirname(dirname(__FILE__))));
 
-        $this->has_fields         = false;
+        $this->has_fields         = true;
         $this->method_title       = __('藍新金流', 'woocommerce');
         $this->method_description = __('透過藍新科技整合金流輕鬆付款', 'woocommerce');
         
@@ -1174,16 +1174,34 @@ class WC_newebpay extends baseNwpMPG
         $szHtml        .= '付款方式 : ';
         $szHtml        .= '<select name="nwp_selected_payments">';
 
+        // 檢查是否為重新付款頁面
+        $is_order_pay_page = false;
+        $current_order = null;
+        
+        if (is_wc_endpoint_url('order-pay')) {
+            $is_order_pay_page = true;
+            
+            // 嘗試獲取當前訂單
+            global $wp;
+            if (isset($wp->query_vars['order-pay'])) {
+                $order_id = absint($wp->query_vars['order-pay']);
+                $current_order = wc_get_order($order_id);
+            }
+        }
+
+        // Debug: 記錄重新付款頁面的處理
+        if ($is_order_pay_page && defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+            error_log('Newebpay: Order-pay page detected. Order ID: ' . ($current_order ? $current_order->get_id() : 'unknown'));
+            error_log('Newebpay: Available payment methods: ' . print_r(array_keys($payment_method), true));
+        }
+
         foreach ($payment_method as $payment_method => $value) {
             if ($payment_method == 'CVSCOMNotPayed') {
                 $cvscom_not_payed = 1;
                 continue;
             }
-            // 暫時隱藏超商取貨付款選項
-            if ($payment_method == 'CVSCOMPayed') {
-                continue;
-            }
-            // 測試模式暫不開放 WechatPay 和 Alipay
+            
+            // 只在測試模式下限制微信和支付寶（如果有技術限制）
             if ($this->settings['TestMode'] == 'yes' && in_array($payment_method, array('EZPWECHAT', 'EZPALIPAY'))) {
                 continue;
             }

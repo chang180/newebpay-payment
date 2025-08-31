@@ -82,3 +82,37 @@
 ---
 
 > 💡 **提示**: 建議按照目錄結構順序閱讀文檔，先從 `docs/plugin-structure.md` 開始。
+
+## 清理說明
+
+在 2025-08-31 進行了清理：
+- 已將 `.ai-dev-docs/reports/` 與 `.ai-dev-docs/fixes/` 內容移至 `.ai-dev-docs/backups/` 以保留原始紀錄並簡化主要目錄。
+- 需要還原或檢視原始報告時，請從 `.ai-dev-docs/backups/` 取回。
+
+## 快速 smoke 測試 (curl 範例)
+
+可以使用下列命令驗證 REST API 是否回傳可用的付款方式（請在 Site 根目錄執行或將 URL 換成您的環境）：
+
+```bash
+# 取回 Newebpay Blocks 狀態
+curl -sS "http://your-site.local/wp-json/newebpay/v1/status" | jq .
+
+# 取回付款方式
+curl -sS "http://your-site.local/wp-json/newebpay/v1/payment-methods" | jq .
+```
+
+將 `your-site.local` 替換為您本機或測試環境的主機名稱。
+
+### PowerShell smoke-test
+
+也可使用專用的 PowerShell 腳本進行測試，腳本位於 `.ai-dev-docs/tests/smoke-test.ps1`，使用方式：
+
+```powershell
+# 範例：
+.\smoke-test.ps1 -SiteUrl 'http://your-site.local'
+```
+
+注意事項：
+- 若網站使用 HTTPS，請改用 `https://`。
+- 在 CI 或自動化環境執行時，請確保可訪問該 Site URL，並在需要時加入憑證驗證或代理設定。
+- 腳本會檢查回傳是否包含 `data[].frontend_id` 以及 `cvscom_not_payed` 欄位，若缺少會以 Warning/非 0 exit code 輸出。

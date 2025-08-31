@@ -43,9 +43,11 @@ const Content = ( props ) => {
     useEffect( () => {
         const unsubscribe = onPaymentSetup( () => {
             // 準備要傳遞給後端的資料
+            // 使用 backend id（從 UI id 轉換）來作為提交值
+            const backendSelected = uiToBackendId(selectedMethod);
             const paymentMethodData = {
-                selectedMethod: selectedMethod,
-                newebpay_selected_method: selectedMethod,
+                selectedMethod: backendSelected,
+                newebpay_selected_method: backendSelected,
                 cvscom_not_payed: cvscomNotPayed
             };
             
@@ -98,24 +100,39 @@ const Content = ( props ) => {
             try {
                 setIsLoading(true);
                 const apiUrl = window.newebpayBlocksData?.apiUrl || '/wp-json/newebpay/v1';
+                console.log('Newebpay: Fetching payment methods from:', `${apiUrl}/payment-methods`);
+                
                 const response = await fetch(`${apiUrl}/payment-methods`);
+                console.log('Newebpay: API response status:', response.status);
+                
                 const data = await response.json();
+                console.log('Newebpay: API response data:', data);
                 
                 if (data.success && data.data) {
-                    setPaymentMethods(data.data);
-                    // 預設選擇第一個付款方式
-                    if (data.data.length > 0) {
-                        setSelectedMethod(data.data[0].id);
-                        // useEffect 會自動處理隱藏欄位更新
+                    console.log('Newebpay: Setting payment methods:', data.data);
+
+                    // 優先使用 API 回傳的 frontend_id（如果存在）來做為 UI 的 value
+                    const uiMethods = data.data.map(method => {
+                        return Object.assign({}, method, {
+                            ui_id: method.frontend_id ? method.frontend_id : method.id
+                        });
+                    });
+
+                    setPaymentMethods(uiMethods);
+                    // 預設選擇第一個付款方式（使用 ui_id）
+                    if (uiMethods.length > 0) {
+                        setSelectedMethod(uiMethods[0].ui_id);
                     }
                     
                     // 檢查是否需要顯示超商取貨不付款選項
                     // 總是顯示超商取貨不付款選項，讓用戶可以選擇
                     setShowCVSCOMNotPayed(true);
                 } else {
+                    console.error('Newebpay: API returned unsuccessful response:', data);
                     setError('無法載入付款方式');
                 }
             } catch (err) {
+                console.error('Newebpay: Error fetching payment methods:', err);
                 setError('載入付款方式時發生錯誤');
             } finally {
                 setIsLoading(false);
@@ -126,13 +143,21 @@ const Content = ( props ) => {
     }, []);
 
     // 處理付款方式選擇
+    // helper: 把 UI id 轉回 backend id（用於提交）
+    const uiToBackendId = (uiId) => {
+        const found = paymentMethods.find(m => m.ui_id === uiId || m.id === uiId);
+        return found ? (found.id || found.ui_id) : uiId;
+    };
+
     const handleMethodChange = (event) => {
         const newMethod = event.target.value;
         setSelectedMethod(newMethod);
         
         // 如果選擇了超商取貨付款 (CVSCOM)，自動取消超商取貨不付款並隱藏選項
         let finalCvscomNotPayed = cvscomNotPayed;
-        if (newMethod && (newMethod.toLowerCase() === 'cvscom' || newMethod.toLowerCase().includes('cvscom'))) {
+        // 判斷時使用 uiToBackendId 來比對後端鍵
+        const backendId = uiToBackendId(newMethod).toLowerCase();
+        if (backendId && (backendId === 'cvscom' || backendId.includes('cvscom'))) {
             setCvscomNotPayed(false);
             setShowCVSCOMNotPayed(false); // 隱藏超商取貨不付款選項
             finalCvscomNotPayed = false;
@@ -272,7 +297,7 @@ const Content = ( props ) => {
             key: 'method-details',
             className: 'newebpay-method-details'
         }, (() => {
-            const currentMethod = paymentMethods.find(m => m.id === selectedMethod);
+            const currentMethod = paymentMethods.find(m => m.ui_id === selectedMethod || m.id === selectedMethod);
             return currentMethod ? [
                 createElement('div', {
                     key: 'method-name',
@@ -500,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target.matches('.wc-block-components-checkout-place-order-button') ||
             event.target.closest('.wc-block-components-checkout-place-order-button')) {
             
-            // 從 sessionStorage 獲取最新選擇
+                // 從 sessionStorage 獲取最新選擇（這裡存的是 backend id）
             const selectedMethod = sessionStorage.getItem('newebpay_selected_method');
             const cvscomNotPayed = sessionStorage.getItem('newebpay_cvscom_not_payed') === 'true';
             

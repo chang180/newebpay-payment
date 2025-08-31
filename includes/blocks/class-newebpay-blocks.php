@@ -57,6 +57,37 @@ class Newebpay_Blocks {
         }
         return self::$instance;
     }
+
+    /**
+     * 將後端鍵值轉換為顯示標籤（參考 nwpMPG::convert_payment）
+     */
+    private function convert_backend_key_to_label( $payment_method ) {
+        $method = array(
+            'Credit'     => '信用卡一次付清',
+            'AndroidPay' => 'Google Pay',
+            'SamsungPay' => 'Samsung Pay',
+            'LinePay'    => 'Line Pay',
+            'Inst'       => '信用卡分期',
+            'CreditRed'  => '信用卡紅利',
+            'UnionPay'   => '銀聯卡',
+            'Webatm'     => 'WEBATM',
+            'Vacc'       => 'ATM轉帳',
+            'CVS'        => '超商代碼',
+            'BARCODE'    => '超商條碼',
+            'EsunWallet' => '玉山 Wallet',
+            'TaiwanPay'  => '台灣 Pay',
+            'BitoPay'    => 'BitoPay',
+            'EZPWECHAT'  => '微信支付',
+            'EZPALIPAY'  => '支付寶',
+            'APPLEPAY'   => 'Apple Pay',
+            'SmartPay'   => '智慧ATM2.0',
+            'TWQR'       => 'TWQR',
+            'CVSCOMPayed' => '超商取貨付款',
+            'CVSCOMNotPayed' => '超商取貨不付款',
+        );
+
+        return isset( $method[ $payment_method ] ) ? $method[ $payment_method ] : $payment_method;
+    }
     
     /**
      * 建構函式
@@ -124,7 +155,8 @@ class Newebpay_Blocks {
         // 檢查 Gutenberg 支援
         if ( ! function_exists( 'register_block_type' ) ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( 'Newebpay Blocks: register_block_type function not available. Gutenberg not supported.' );
+                // Removed debug: Newebpay Blocks: register_block_type function not available. Gutenberg not supported.
+                // error_log( 'Newebpay Blocks: register_block_type function not available. Gutenberg not supported.' );
             }
             return;
         }
@@ -132,19 +164,22 @@ class Newebpay_Blocks {
         // 檢查 WooCommerce 是否啟用 - 改為更寬鬆的檢查，允許在沒有 WooCommerce 時也註冊區塊
         if ( ! function_exists( 'WC' ) && ! class_exists( 'WooCommerce' ) ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( 'Newebpay Blocks: WooCommerce not detected. Blocks will still be registered for compatibility.' );
+                // Removed debug: Newebpay Blocks: WooCommerce not detected. Blocks will still be registered for compatibility.
+                // error_log( 'Newebpay Blocks: WooCommerce not detected. Blocks will still be registered for compatibility.' );
             }
         }
         
         $registered_count = 0;
         
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( 'Newebpay Blocks: Starting block registration. Total blocks to register: ' . count( $this->blocks ) );
+            // Removed debug: Newebpay Blocks: Starting block registration. Total blocks to register: {count}
+            // error_log( 'Newebpay Blocks: Starting block registration. Total blocks to register: ' . count( $this->blocks ) );
         }
         
         foreach ( $this->blocks as $block_key => $block_config ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( "Newebpay Blocks: Attempting to register block '{$block_key}' with name '{$block_config['name']}'" );
+                // Removed debug: Newebpay Blocks: Attempting to register block '{$block_key}' with name '{$block_config['name']}'
+                // error_log( "Newebpay Blocks: Attempting to register block '{$block_key}' with name '{$block_config['name']}'" );
             }
             
             // 使用新的 block.json 註冊方式
@@ -152,7 +187,8 @@ class Newebpay_Blocks {
             
             if ( file_exists( $block_json_path . '/block.json' ) ) {
                 if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                    error_log( "Newebpay Blocks: Found block.json at {$block_json_path}/block.json" );
+                    // Removed debug: Newebpay Blocks: Found block.json at {$block_json_path}/block.json
+                    // error_log( "Newebpay Blocks: Found block.json at {$block_json_path}/block.json" );
                 }
                 
                 $result = register_block_type( $block_json_path, array(
@@ -162,16 +198,19 @@ class Newebpay_Blocks {
                 if ( $result ) {
                     $registered_count++;
                     if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                        error_log( "Newebpay Blocks: Successfully registered block '{$block_config['name']}' from block.json" );
+                        // Removed debug: Newebpay Blocks: Successfully registered block '{$block_config['name']}' from block.json
+                        // error_log( "Newebpay Blocks: Successfully registered block '{$block_config['name']}' from block.json" );
                     }
                 } else {
                     if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                        error_log( "Newebpay Blocks: Failed to register block '{$block_config['name']}' from block.json" );
+                        // Removed debug: Newebpay Blocks: Failed to register block '{$block_config['name']}' from block.json
+                        // error_log( "Newebpay Blocks: Failed to register block '{$block_config['name']}' from block.json" );
                     }
                 }
             } else {
                 if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                    error_log( "Newebpay Blocks: block.json not found at {$block_json_path}, attempting manual registration" );
+                    // Removed debug: Newebpay Blocks: block.json not found at {$block_json_path}, attempting manual registration
+                    // error_log( "Newebpay Blocks: block.json not found at {$block_json_path}, attempting manual registration" );
                 }
                 
                 // 降級為手動註冊
@@ -187,11 +226,13 @@ class Newebpay_Blocks {
                 if ( $result ) {
                     $registered_count++;
                     if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                        error_log( "Newebpay Blocks: Successfully registered block '{$block_config['name']}' manually" );
+                        // Removed debug: Newebpay Blocks: Successfully registered block '{$block_config['name']}' manually
+                        // error_log( "Newebpay Blocks: Successfully registered block '{$block_config['name']}' manually" );
                     }
                 } else {
                     if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                        error_log( "Newebpay Blocks: Failed to register block '{$block_config['name']}' manually" );
+                        // Removed debug: Newebpay Blocks: Failed to register block '{$block_config['name']}' manually
+                        // error_log( "Newebpay Blocks: Failed to register block '{$block_config['name']}' manually" );
                     }
                 }
             }
@@ -199,12 +240,14 @@ class Newebpay_Blocks {
         
         // 記錄成功註冊的訊息
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( "Newebpay Blocks: Successfully registered {$registered_count} out of " . count( $this->blocks ) . " block types." );
+            // Removed debug: Newebpay Blocks: Successfully registered {$registered_count} out of {count} block types.
+            // error_log( "Newebpay Blocks: Successfully registered {$registered_count} out of " . count( $this->blocks ) . " block types." );
         }
         
         // 如果沒有成功註冊任何區塊，記錄錯誤
         if ( $registered_count === 0 && count( $this->blocks ) > 0 ) {
-            error_log( 'Newebpay Blocks: Warning - No blocks were registered. Check WooCommerce installation and block definitions.' );
+            // Removed debug: Newebpay Blocks: Warning - No blocks were registered. Check WooCommerce installation and block definitions.
+            // error_log( 'Newebpay Blocks: Warning - No blocks were registered. Check WooCommerce installation and block definitions.' );
         }
     }
     
@@ -219,8 +262,10 @@ class Newebpay_Blocks {
         }
         
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( "Newebpay Blocks: Enqueuing block editor assets" );
-            error_log( "Newebpay Blocks: Assets URL: " . $this->assets_url );
+            // Removed debug: Newebpay Blocks: Enqueuing block editor assets
+            // error_log( "Newebpay Blocks: Enqueuing block editor assets" );
+            // Removed debug: Newebpay Blocks: Assets URL
+            // error_log( "Newebpay Blocks: Assets URL: " . $this->assets_url );
         }
         
         $editor_js_path = $this->assets_url . '/js/blocks-editor.js';
@@ -233,16 +278,21 @@ class Newebpay_Blocks {
         // 只有檔案存在時才載入
         if ( ! file_exists( $editor_js_file ) || ! file_exists( $editor_css_file ) ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( "Newebpay Blocks: Editor assets not found, skipping enqueue" );
+                // Removed debug: Newebpay Blocks: Editor assets not found, skipping enqueue
+                // error_log( "Newebpay Blocks: Editor assets not found, skipping enqueue" );
             }
             return;
         }
         
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( "Newebpay Blocks: Editor JS file path: " . $editor_js_file );
-            error_log( "Newebpay Blocks: Editor JS exists: " . ( file_exists( $editor_js_file ) ? 'Yes' : 'No' ) );
-            error_log( "Newebpay Blocks: Editor CSS file path: " . $editor_css_file );
-            error_log( "Newebpay Blocks: Editor CSS exists: " . ( file_exists( $editor_css_file ) ? 'Yes' : 'No' ) );
+            // Removed debug: Newebpay Blocks: Editor JS file path
+            // error_log( "Newebpay Blocks: Editor JS file path: " . $editor_js_file );
+            // Removed debug: Newebpay Blocks: Editor JS exists
+            // error_log( "Newebpay Blocks: Editor JS exists: " . ( file_exists( $editor_js_file ) ? 'Yes' : 'No' ) );
+            // Removed debug: Newebpay Blocks: Editor CSS file path
+            // error_log( "Newebpay Blocks: Editor CSS file path: " . $editor_css_file );
+            // Removed debug: Newebpay Blocks: Editor CSS exists
+            // error_log( "Newebpay Blocks: Editor CSS exists: " . ( file_exists( $editor_css_file ) ? 'Yes' : 'No' ) );
         }
         
         wp_enqueue_script(
@@ -271,7 +321,8 @@ class Newebpay_Blocks {
         wp_localize_script( 'newebpay-blocks-editor', 'newebpayBlocks', $localize_data );
         
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( "Newebpay Blocks: Successfully enqueued editor assets and localized data" );
+            // Removed debug: Newebpay Blocks: Successfully enqueued editor assets and localized data
+            // error_log( "Newebpay Blocks: Successfully enqueued editor assets and localized data" );
         }
     }
     
@@ -313,7 +364,8 @@ class Newebpay_Blocks {
      */
     public function add_block_category( $categories, $post ) {
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( "Newebpay Blocks: Adding block category" );
+            // Removed debug: Newebpay Blocks: Adding block category
+            // error_log( "Newebpay Blocks: Adding block category" );
         }
         
         $newebpay_category = array(
@@ -334,11 +386,13 @@ class Newebpay_Blocks {
         if ( ! $category_exists ) {
             $categories[] = $newebpay_category;
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( "Newebpay Blocks: Successfully added block category 'newebpay'" );
+                // Removed debug: Newebpay Blocks: Successfully added block category 'newebpay'
+                // error_log( "Newebpay Blocks: Successfully added block category 'newebpay'" );
             }
         } else {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( "Newebpay Blocks: Block category 'newebpay' already exists" );
+                // Removed debug: Newebpay Blocks: Block category 'newebpay' already exists
+                // error_log( "Newebpay Blocks: Block category 'newebpay' already exists" );
             }
         }
         
@@ -381,11 +435,12 @@ class Newebpay_Blocks {
      */
     public function api_get_payment_methods( $request ) {
         $methods = $this->get_available_payment_methods();
-        
+
         return new WP_REST_Response( array(
             'success' => true,
             'data' => $methods,
             'count' => count( $methods ),
+            'source' => 'rest_api',
             'version' => '1.0.10'
         ), 200 );
     }
@@ -521,72 +576,55 @@ class Newebpay_Blocks {
      * 取得可用的付款方式
      */
     private function get_available_payment_methods() {
-        // 取得 Newebpay 設定 (正確的選項名稱)
-        $nwp_settings = get_option( 'woocommerce_newebpay_settings' );
-        
-        if ( ! $nwp_settings || ! is_array( $nwp_settings ) ) {
-            // 如果沒有設定，回傳空陣列並記錄警告
+        // 直接使用傳統 WC_newebpay 類別的 get_selected_payment() 取得相同的設定
+        if ( class_exists( 'WC_newebpay' ) ) {
+            $nwp_instance = new WC_newebpay();
+            // 傳統方法回傳的格式為關聯陣列，鍵值為後端 key
+            $selected = $nwp_instance->get_selected_payment();
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( 'Newebpay Blocks: No Newebpay settings found. Please configure Newebpay payment gateway first.' );
+                // Removed debug: Newebpay Blocks: Retrieved selected from WC_newebpay
+                // error_log( 'Newebpay Blocks: Retrieved selected from WC_newebpay: ' . print_r( $selected, true ) );
             }
-            return array();
-        }
-        
-        // 檢查基本設定
-        $required_settings = array( 'MerchantID', 'HashKey', 'HashIV' );
-        foreach ( $required_settings as $setting ) {
-            if ( empty( $nwp_settings[ $setting ] ) ) {
-                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                    error_log( "Newebpay Blocks: Missing required setting: {$setting}" );
+
+            // 使用 convert_payment 中的 mapping 取得顯示用名稱
+            $methods = array();
+            foreach ( $selected as $key => $val ) {
+                // 跳過 CVSCOMNotPayed，因為在前端通常單獨處理
+                if ( $key === 'CVSCOMNotPayed' ) {
+                    continue;
                 }
-                return array();
-            }
-        }
-        
-        $methods = array();
-        $all_methods = $this->get_all_payment_methods();
-        
-        foreach ( $all_methods as $key => $method ) {
-            // 檢查該付款方式是否啟用
-            $setting_key = $this->get_payment_method_setting_key( $key );
-            if ( isset( $nwp_settings[ $setting_key ] ) && $nwp_settings[ $setting_key ] === 'yes' ) {
-                // 轉換圖標標識符為實際圖片 URL
-                $icon_url = $this->get_payment_method_icon_url( $method['icon'] );
-                
-                $methods[ $key ] = array_merge( $method, array(
+
+                $methods[] = array(
+                    'name' => $this->convert_backend_key_to_label( $key ),
+                    'description' => '',
                     'id' => $key,
-                    'value' => $key,  // 前端期望的欄位
-                    'label' => $method['name'],  // 前端期望的欄位
                     'enabled' => true,
-                    'setting_key' => $setting_key,
-                    'icon' => $icon_url  // 覆蓋原本的圖標標識符
-                ) );
+                    'setting_key' => 'NwpPaymentMethod' . $key,
+                    'backend_key' => $key
+                );
             }
+
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                // Removed debug: Newebpay Blocks: Final methods count (from WC_newebpay)
+                // error_log( 'Newebpay Blocks: Final methods count (from WC_newebpay): ' . count( $methods ) );
+            }
+            return $methods;
         }
-        
+
+        // Fallback: 如果沒有 WC_newebpay 類別，回傳空陣列
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( 'Newebpay Blocks: Found ' . count( $methods ) . ' enabled payment methods.' );
+            // Removed debug: Newebpay Blocks: WC_newebpay class not available, returning empty.
+            // error_log( 'Newebpay Blocks: WC_newebpay class not available, returning empty.' );
         }
-        
-        // 轉換關聯陣列為數字索引陣列，確保 JavaScript 能正確處理
-        return array_values( $methods );
+        return array();
     }
     
     /**
      * 取得付款方式的設定鍵值
      */
     private function get_payment_method_setting_key( $method_key ) {
-        $setting_keys = array(
-            'credit' => 'NwpPaymentMethodCredit',
-            'webatm' => 'NwpPaymentMethodWebatm', 
-            'vacc' => 'NwpPaymentMethodVacc',
-            'cvs' => 'NwpPaymentMethodCVS',
-            'barcode' => 'NwpPaymentMethodBARCODE',
-            'smartpay' => 'NwpPaymentMethodSmartPay',  // 注意：傳統系統使用 SmartPay (大寫P)
-            'cvscom' => 'NwpPaymentMethodCVSCOMPayed'
-        );
-        
-        return isset( $setting_keys[ $method_key ] ) ? $setting_keys[ $method_key ] : 'NwpPaymentMethod' . ucfirst( $method_key );
+        // 直接對應到 Newebpay 設定中的鍵名
+        return 'NwpPaymentMethod' . $method_key;
     }
     
     /**
@@ -594,40 +632,110 @@ class Newebpay_Blocks {
      */
     private function get_all_payment_methods() {
         return array(
-            'credit' => array(
-                'name' => __( '信用卡', 'newebpay-payment' ),
+            'Credit' => array(
+                'name' => __( '信用卡一次付清', 'newebpay-payment' ),
                 'description' => __( '支援各大銀行信用卡', 'newebpay-payment' ),
                 'icon' => 'credit-card'
             ),
-            'webatm' => array(
-                'name' => __( '網路ATM', 'newebpay-payment' ),
+            'AndroidPay' => array(
+                'name' => __( 'Google Pay', 'newebpay-payment' ),
+                'description' => __( 'Google Pay 行動支付', 'newebpay-payment' ),
+                'icon' => 'google-pay'
+            ),
+            'SamsungPay' => array(
+                'name' => __( 'Samsung Pay', 'newebpay-payment' ),
+                'description' => __( 'Samsung Pay 行動支付', 'newebpay-payment' ),
+                'icon' => 'samsung-pay'
+            ),
+            'LinePay' => array(
+                'name' => __( 'Line Pay', 'newebpay-payment' ),
+                'description' => __( 'Line Pay 行動支付', 'newebpay-payment' ),
+                'icon' => 'line-pay'
+            ),
+            'Inst' => array(
+                'name' => __( '信用卡分期', 'newebpay-payment' ),
+                'description' => __( '信用卡分期付款', 'newebpay-payment' ),
+                'icon' => 'credit-card'
+            ),
+            'CreditRed' => array(
+                'name' => __( '信用卡紅利', 'newebpay-payment' ),
+                'description' => __( '信用卡紅利折抵', 'newebpay-payment' ),
+                'icon' => 'credit-card'
+            ),
+            'UnionPay' => array(
+                'name' => __( '銀聯卡', 'newebpay-payment' ),
+                'description' => __( '中國銀聯卡支付', 'newebpay-payment' ),
+                'icon' => 'unionpay'
+            ),
+            'Webatm' => array(
+                'name' => __( 'WEBATM', 'newebpay-payment' ),
                 'description' => __( '使用讀卡機進行轉帳', 'newebpay-payment' ),
                 'icon' => 'atm'
             ),
-            'vacc' => array(
+            'Vacc' => array(
                 'name' => __( 'ATM轉帳', 'newebpay-payment' ),
                 'description' => __( '虛擬帳號ATM轉帳', 'newebpay-payment' ),
                 'icon' => 'bank'
             ),
-            'cvs' => array(
+            'CVS' => array(
                 'name' => __( '超商代碼', 'newebpay-payment' ),
                 'description' => __( '超商代碼繳費', 'newebpay-payment' ),
                 'icon' => 'store'
             ),
-            'barcode' => array(
+            'BARCODE' => array(
                 'name' => __( '超商條碼', 'newebpay-payment' ),
                 'description' => __( '超商條碼繳費', 'newebpay-payment' ),
                 'icon' => 'barcode'
             ),
-            'smartpay' => array(
+            'EsunWallet' => array(
+                'name' => __( '玉山 Wallet', 'newebpay-payment' ),
+                'description' => __( '玉山銀行數位錢包', 'newebpay-payment' ),
+                'icon' => 'wallet'
+            ),
+            'TaiwanPay' => array(
+                'name' => __( '台灣 Pay', 'newebpay-payment' ),
+                'description' => __( '台灣行動支付', 'newebpay-payment' ),
+                'icon' => 'taiwan-pay'
+            ),
+            'BitoPay' => array(
+                'name' => __( 'BitoPay', 'newebpay-payment' ),
+                'description' => __( 'BitoPay 數位支付', 'newebpay-payment' ),
+                'icon' => 'bito-pay'
+            ),
+            'EZPWECHAT' => array(
+                'name' => __( '微信支付', 'newebpay-payment' ),
+                'description' => __( '微信支付', 'newebpay-payment' ),
+                'icon' => 'wechat'
+            ),
+            'EZPALIPAY' => array(
+                'name' => __( '支付寶', 'newebpay-payment' ),
+                'description' => __( '支付寶支付', 'newebpay-payment' ),
+                'icon' => 'alipay'
+            ),
+            'CVSCOMPayed' => array(
+                'name' => __( '超商取貨付款', 'newebpay-payment' ),
+                'description' => __( '超商取貨付款', 'newebpay-payment' ),
+                'icon' => 'shopping-bag'
+            ),
+            'CVSCOMNotPayed' => array(
+                'name' => __( '超商取貨不付款', 'newebpay-payment' ),
+                'description' => __( '超商取貨不付款', 'newebpay-payment' ),
+                'icon' => 'package'
+            ),
+            'APPLEPAY' => array(
+                'name' => __( 'Apple Pay', 'newebpay-payment' ),
+                'description' => __( 'Apple Pay 行動支付', 'newebpay-payment' ),
+                'icon' => 'apple-pay'
+            ),
+            'SmartPay' => array(
                 'name' => __( '智慧ATM2.0', 'newebpay-payment' ),
                 'description' => __( '智慧型ATM轉帳', 'newebpay-payment' ),
                 'icon' => 'smartphone'
             ),
-            'cvscom' => array(
-                'name' => __( '超商取貨付款', 'newebpay-payment' ),
-                'description' => __( '超商取貨付款', 'newebpay-payment' ),
-                'icon' => 'shopping-bag'
+            'TWQR' => array(
+                'name' => __( 'TWQR', 'newebpay-payment' ),
+                'description' => __( '台灣QR碼支付', 'newebpay-payment' ),
+                'icon' => 'qr-code'
             )
         );
     }
