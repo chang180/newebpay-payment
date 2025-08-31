@@ -238,6 +238,9 @@ class WC_newebpay extends baseNwpMPG
         add_action('woocommerce_order_status_processing', array($this, 'on_order_status_processing'));
         add_action('woocommerce_order_status_failed', array($this, 'on_order_status_failed'));
         
+        // 針對 WooCommerce Blocks 添加樣式來隱藏預設的重試按鈕
+        add_action('wp_head', array($this, 'add_custom_failed_order_styles'));
+        
         // 控制重試付款按鈕的顯示
         add_filter('woocommerce_my_account_my_orders_actions', array($this, 'filter_retry_payment_actions'), 10, 2);
         add_filter('woocommerce_valid_order_statuses_for_payment_complete', array($this, 'filter_payment_complete_statuses'), 10, 2);
@@ -1448,6 +1451,44 @@ class WC_newebpay extends baseNwpMPG
             if (function_exists('wc_get_logger')) {
                 $logger = wc_get_logger();
                 $logger->info('Order failed - cart preserved for retry', array('source' => 'newebpay-payment', 'order_id' => $order_id));
+            }
+        }
+    }
+
+    /**
+     * 添加自定義樣式來隱藏 WooCommerce Blocks 的預設重試按鈕
+     */
+    public function add_custom_failed_order_styles()
+    {
+        // 只在訂單確認頁面執行
+        if (is_wc_endpoint_url('order-received')) {
+            global $wp;
+            
+            // 嘗試獲取當前訂單
+            $order = null;
+            if (isset($wp->query_vars['order-received'])) {
+                $order_id = absint($wp->query_vars['order-received']);
+                $order = wc_get_order($order_id);
+            }
+            
+            // 只對藍新金流的失敗訂單隱藏預設按鈕
+            if ($order && 
+                $order->get_payment_method() === 'newebpay' && 
+                $order->get_status() === 'failed' &&
+                empty($order->get_transaction_id())) {
+                ?>
+                <style type="text/css">
+                    /* 隱藏 WooCommerce Blocks 預設的失敗訂單動作按鈕 */
+                    .wc-block-order-confirmation-status__actions {
+                        display: none !important;
+                    }
+                    
+                    /* 確保我們自定義的重試按鈕顯示正常 */
+                    .woocommerce-order-retry-payment {
+                        display: block !important;
+                    }
+                </style>
+                <?php
             }
         }
     }
