@@ -519,7 +519,19 @@ class WC_newebpay extends baseNwpMPG
             exit();
         }
 
-        if (empty($req_data['PaymentType']) || empty($req_data['Status'])) {
+        // 統一處理所有非成功狀態
+        if (!empty($req_data['Status']) && $req_data['Status'] != 'SUCCESS') {
+            // 交易失敗，清除 transaction_id 以確保可以重試付款
+            if (isset($order) && $order) {
+                $order->set_transaction_id('');
+                $order->update_status('failed', sprintf(
+                    __('Payment failed via Newebpay. Status: %s, Message: %s', 'newebpay-payment'),
+                    esc_attr($req_data['Status']),
+                    esc_attr(urldecode($req_data['Message']))
+                ));
+            }
+            $result = ''; // 空的結果，後面會添加重試區塊
+        } elseif (empty($req_data['PaymentType']) || empty($req_data['Status'])) {
             // 如果訂單狀態是 failed，不顯示錯誤訊息，後面會有重試區塊
             if (isset($order) && $order && $order->get_status() === 'failed') {
                 $result = ''; // 空的結果，後面會添加重試區塊
@@ -548,12 +560,15 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '銀行代碼：' . esc_attr($req_data['BankCode']) . '<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
+                    // 清除 transaction_id 以確保可以重試付款
+                    $order->set_transaction_id('');
                     // 設定訂單狀態為失敗，以便顯示重試付款選項
                     $order->update_status('failed', sprintf(
                         __('Payment failed via Newebpay. Error: %s', 'newebpay-payment'),
                         esc_attr(urldecode($req_data['Message']))
                     ));
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    // 失敗時不顯示錯誤訊息，後面會有統一的重試區塊
+                    // $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
             case 'CVS':
@@ -561,12 +576,15 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '取號成功<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
+                    // 清除 transaction_id 以確保可以重試付款
+                    $order->set_transaction_id('');
                     // 設定訂單狀態為失敗，以便顯示重試付款選項
                     $order->update_status('failed', sprintf(
                         __('Payment failed via Newebpay. Error: %s', 'newebpay-payment'),
                         esc_attr(urldecode($req_data['Message']))
                     ));
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    // 失敗時不顯示錯誤訊息，後面會有統一的重試區塊
+                    // $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
             case 'BARCODE':
@@ -574,7 +592,15 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '取號成功<br>';
                     $result .= '請前往信箱列印繳費單<br>';
                 } else {
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    // 清除 transaction_id 以確保可以重試付款
+                    $order->set_transaction_id('');
+                    // 設定訂單狀態為失敗，以便顯示重試付款選項
+                    $order->update_status('failed', sprintf(
+                        __('Payment failed via Newebpay. Error: %s', 'newebpay-payment'),
+                        esc_attr(urldecode($req_data['Message']))
+                    ));
+                    // 失敗時不顯示錯誤訊息，後面會有統一的重試區塊
+                    // $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
             case 'CVSCOM':
@@ -816,6 +842,8 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '銀行代碼：' . esc_attr($req_data['BankCode']) . '<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
+                    // 清除 transaction_id 以確保可以重試付款
+                    $order->set_transaction_id('');
                     // 取號失敗，設定訂單狀態為 failed
                     $order->update_status('failed', sprintf(
                         __('Virtual account creation failed via Newebpay. Status: %s, Message: %s', 'newebpay-payment'),
@@ -831,6 +859,13 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '取號成功<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
+                    // 清除 transaction_id 以確保可以重試付款
+                    $order->set_transaction_id('');
+                    $order->update_status('failed', sprintf(
+                        __('CVS payment code creation failed via Newebpay. Status: %s, Message: %s', 'newebpay-payment'),
+                        $req_data['Status'],
+                        urldecode($req_data['Message'])
+                    ));
                     $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;
@@ -839,6 +874,13 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '取號成功<br>';
                     $result .= '請前往信箱列印繳費單<br>';
                 } else {
+                    // 清除 transaction_id 以確保可以重試付款
+                    $order->set_transaction_id('');
+                    $order->update_status('failed', sprintf(
+                        __('Barcode creation failed via Newebpay. Status: %s, Message: %s', 'newebpay-payment'),
+                        $req_data['Status'],
+                        urldecode($req_data['Message'])
+                    ));
                     $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
                 }
                 break;

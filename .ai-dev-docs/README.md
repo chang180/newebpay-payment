@@ -3,15 +3,16 @@
 ## 最新狀態
 - **版本**: v1.0.10
 - **狀態**: ✅ 生產環境就緒 - WooCommerce Blocks 完全整合
-- **最後更新**: 2025-01-09
-- **最新修復**: WooCommerce Blocks 結帳支付方式傳遞完全解決
+- **最後更新**: 2025-09-01
+- **最新修復**: VACC/智慧ATM2.0 取號失敗重試付款機制
 
 ## 最新開發報告
+- 📄 [VACC取號失敗重試付款修正報告](reports/VACC取號失敗重試付款修正報告.md) - 2025-09-01
 - 📄 [v1.0.10 WooCommerce Blocks 支付方式傳遞修復](reports/v1.0.10-blocks-payment-fix.md) - 2025-01-09
 
 ### 🔧 核心檔案結構
 - `includes/class-newebpay-wc-blocks.php` - WooCommerce Blocks 整合主檔案
-- `includes/nwp/nwpMPG.php` - 增強型付款閘道 (支援 Blocks)
+- `includes/nwp/nwpMPG.php` - 增強型付款閘道 (支援 Blocks + 失敗重試)
 - `assets/js/wc-blocks-checkout.js` - 前端 JavaScript 整合
 
 ## 修復狀態
@@ -24,6 +25,8 @@
 - **智慧ATM2.0 正確參數格式** (VACC + SourceType)
 - **支付方式選擇傳遞問題徹底解決**
 - **前端與後端資料流完全打通**
+- **統一失敗處理機制** - 任何非 SUCCESS 狀態自動觸發重試付款
+- **VACC/智慧ATM2.0 取號失敗重試機制**
 - **生產環境代碼清潔**
 - **同時支援傳統結帳和 WooCommerce Blocks**
 
