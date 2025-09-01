@@ -301,7 +301,7 @@ class WC_newebpay extends baseNwpMPG
      * MPG參數格式
      */
     private function get_newebpay_args($order)
-    {
+    {        
         $merchant_order_no = $order->get_id() . 'T' . time(); // prevent duplicate
         $order->update_meta_data('_newebpayMerchantOrderNo', $merchant_order_no);
         $order->save();
@@ -336,6 +336,21 @@ class WC_newebpay extends baseNwpMPG
             $selected_payment = $order->get_meta('_nwpSelectedPayment');
         }
         
+        // 3. 如果還是沒有，嘗試從 $_POST 中直接取得
+        if (empty($selected_payment)) {
+            $post_methods = array('selectedmethod', 'newebpay_selected_method', 'nwp_selected_payments');
+            foreach ($post_methods as $method) {
+                if (!empty($_POST[$method])) {
+                    $selected_payment = sanitize_text_field($_POST[$method]);
+                    // 立即保存到訂單 meta 和類別屬性
+                    $this->nwpSelectedPayment = $selected_payment;
+                    $order->update_meta_data('_nwpSelectedPayment', $selected_payment);
+                    $order->save();
+                    break;
+                }
+            }
+        }
+        
         // 取得後台設定的啟用支付方式，用於驗證選擇是否有效
         $get_select_payment = $this->get_selected_payment();
         
@@ -355,10 +370,10 @@ class WC_newebpay extends baseNwpMPG
                 'androidpay' => 'AndroidPay',
                 'samsungpay' => 'SamsungPay',
                 'applepay' => 'APPLEPAY',
-                'smartpay' => 'SmartPay'
+                'smartpay' => 'SmartPay'  // 注意：SmartPay 保持駝峰式，不是全大寫
             );
             
-            $payment_config_key = $payment_config_map[$selected_payment] ?? strtoupper($selected_payment);
+            $payment_config_key = $payment_config_map[strtolower($selected_payment)] ?? strtoupper($selected_payment);
             $is_valid_payment = isset($get_select_payment[$payment_config_key]) && $get_select_payment[$payment_config_key] == '1';
         }
         
@@ -381,8 +396,8 @@ class WC_newebpay extends baseNwpMPG
         
         // 只設定用戶選擇的支付方式
         if (!empty($selected_payment)) {
-            // 智慧ATM2.0 特殊處理
-            if ($selected_payment === 'smartpay') {
+            // 智慧ATM2.0 特殊處理（支援多種格式：smartpay, SmartPay）
+            if (strtolower($selected_payment) === 'smartpay') {
                 $post_data['VACC'] = 1;
                 
                 // 取得智慧ATM2.0的設定參數
@@ -1108,6 +1123,7 @@ class WC_newebpay extends baseNwpMPG
         
         if ($is_newebpay_payment) {
             $this->nwpSelectedPayment = $choose_payment;
+            
             return true;
         } else {
             return false;

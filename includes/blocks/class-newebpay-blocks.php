@@ -961,7 +961,7 @@ class Newebpay_Blocks {
                 alert("選擇的付款方式: " + selectedMethod.value);
                 
                 // 測試 API 提交
-                fetch("/wp-json/newebpay/v1/test-selection", {
+                fetch("' . rest_url('newebpay/v1/test-selection') . '", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

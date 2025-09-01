@@ -133,7 +133,7 @@ class Newebpay_WooCommerce_Blocks_Integration {
         wp_localize_script( 'newebpay-blocks-checkout', 'newebpayBlocksData', array(
             'title' => __( 'Newebpay', 'newebpay-payment' ),
             'description' => __( '使用藍新金流進行安全付款', 'newebpay-payment' ),
-            'apiUrl' => home_url( '/wp-json/newebpay/v1' ),
+            'apiUrl' => rest_url( 'newebpay/v1' ),
             'nonce' => wp_create_nonce( 'newebpay_blocks_nonce' ),
             'supportsFeatures' => array(
                 'products',
@@ -468,6 +468,14 @@ class Newebpay_WooCommerce_Blocks_Integration {
             $_POST['selectedmethod'] = 'credit';
             $_POST['nwp_selected_payments'] = 'credit';
             $_POST['newebpay_selected_method'] = 'credit';
+            
+            if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+                error_log('★ 沒有明確選擇，使用預設: credit');
+            }
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+            error_log('★ 最終設置的 $_POST 變量: selectedmethod=' . ($_POST['selectedmethod'] ?? '[未設置]') . ', nwp_selected_payments=' . ($_POST['nwp_selected_payments'] ?? '[未設置]'));
         }
     }
     
