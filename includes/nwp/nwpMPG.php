@@ -30,7 +30,7 @@ class WC_newebpay extends baseNwpMPG
 
         // 智慧ATM2.0 參數
         $this->SmartPaySourceType = trim($this->get_option('SmartPaySourceType'));
-        $this->SmartPaySourceBankID = trim($this->get_option('SmartPaySourceBankID'));
+        $this->SmartPaySourceBankId = trim($this->get_option('SmartPaySourceBankId'));
         $this->SmartPaySourceAccountNo = trim($this->get_option('SmartPaySourceAccountNo'));
 
         // Test Mode
@@ -150,7 +150,7 @@ class WC_newebpay extends baseNwpMPG
                 
                 // 取得智慧ATM2.0的設定參數
                 $source_type = trim($this->get_option('SmartPaySourceType'));
-                $source_bank_id = trim($this->get_option('SmartPaySourceBankID'));
+                $source_bank_id = trim($this->get_option('SmartPaySourceBankId'));
                 $source_account_no = trim($this->get_option('SmartPaySourceAccountNo'));
                 
                 // 加入智慧ATM2.0必要參數

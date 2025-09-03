@@ -174,7 +174,7 @@ return apply_filters(
 			'type'    => 'text',
 			'default' => '',
 		),
-		'SmartPaySourceBankID'  => array(
+		'SmartPaySourceBankId'  => array(
 			'title'   => __( '智慧ATM2.0 - SourceBankId', 'woocommerce' ),
 			'type'    => 'text',
 			'default' => '',
