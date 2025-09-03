@@ -1,52 +1,105 @@
-# Newebpay Payment 藍新金流 WordPress 外掛開發文檔
+# 🤖 AI 開發工作區
 
-## 最新狀態
+**專為 AI 開發者設計的快速啟動文檔庫**
+
+## ⚡ 快速啟動（AI 必讀）
+
+### 🎯 立即行動清單
+```
+1. 讀取 AI-WORKFLOW.md     → 了解 AI 工作流程
+2. 讀取 AI-CONTEXT.md      → 掌握專案核心上下文  
+3. 讀取 AI-CODEBASE-MAP.md → 理解檔案結構映射
+4. 根據開發任務類型選擇：
+   - 功能開發 → AI-DEVELOPMENT-PATTERNS.md
+   - 具體任務 → AI-COMMON-TASKS.md
+```
+
+### 🚀 AI 工作原則
+- **無需重新掃描**：所有必要資訊都在這個目錄
+- **上下文優先**：先理解再開發
+- **模式導向**：遵循既定的開發模式
+- **範例驅動**：參考實際任務範例
+
+## � 檔案功能索引
+
+| 檔案 | 用途 | 讀取時機 |
+|------|------|----------|
+| `AI-WORKFLOW.md` | AI 工作流程指引 | 每次開始前必讀 |
+| `AI-CONTEXT.md` | 專案核心上下文 | 第一次開發必讀 |
+| `AI-CODEBASE-MAP.md` | 完整檔案映射 | 需要定位檔案時 |
+| `AI-DEVELOPMENT-PATTERNS.md` | 開發模式與規範 | 編寫新程式碼時 |
+| `AI-COMMON-TASKS.md` | 常見任務範例 | 處理具體功能時 |
+| `AI-QUICK-REFERENCE.md` | 快速命令參考 | 需要快速查詢時 |
+
+## 🎪 專案基本資訊
+
+- **專案類型**：WordPress 付款閘道外掛
+- **主要功能**：藍新金流支付整合
+- **技術架構**：PHP + WooCommerce + WordPress
+- **開發模式**：面向 AI 的快速開發
+
+## 🔄 AI 開發流程
+
+```mermaid
+flowchart TD
+    A[接收開發任務] --> B[讀取 AI-WORKFLOW.md]
+    B --> C[讀取 AI-CONTEXT.md]
+    C --> D[讀取 AI-CODEBASE-MAP.md]
+    D --> E{任務類型?}
+    E -->|新功能| F[讀取 AI-DEVELOPMENT-PATTERNS.md]
+    E -->|具體任務| G[讀取 AI-COMMON-TASKS.md]
+    F --> H[開始開發]
+    G --> H
+    H --> I[完成任務]
+```
+
+## 📋 開發任務分類
+
+### � 基礎功能
+- 新增付款方式
+- 修改付款流程  
+- 更新 API 介面
+- 調整安全設定
+
+### 🎨 前端開發
+- 客製化付款表單
+- 調整結帳流程
+- 修改樣式設計
+
+### ⚙️ 後台管理
+- 新增設定選項
+- 建立報表功能
+- 管理交易記錄
+
+### � 問題修復
+- 修復支付錯誤
+- 解決回調問題
+- 優化效能問題
+
+## 💡 AI 使用提示
+
+1. **優先讀取核心文件**：確保理解專案本質
+2. **使用檔案映射**：快速定位目標檔案
+3. **遵循開發模式**：保持程式碼一致性
+4. **參考任務範例**：加速開發進度
+5. **無需額外掃描**：所有資訊已經整理完成
+
+---
+
+> 這個文檔庫的設計目標：讓任何 AI 在 5 分鐘內進入開發狀態，無需重新學習整個程式庫。
+
+## 📜 版本歷史資訊
+
+### 最新狀態
 - **版本**: v1.0.10
 - **狀態**: ✅ 生產環境就緒 - WooCommerce Blocks 完全整合
 - **最後更新**: 2025-09-01
 - **最新修復**: VACC/智慧ATM2.0 取號失敗重試付款機制
 
-## 最新開發報告
-- 📄 [VACC取號失敗重試付款修正報告](reports/VACC取號失敗重試付款修正報告.md) - 2025-09-01
-- 📄 [v1.0.10 WooCommerce Blocks 支付方式傳遞修復](reports/v1.0.10-blocks-payment-fix.md) - 2025-01-09
-
-### 🔧 核心檔案結構
-- `includes/class-newebpay-wc-blocks.php` - WooCommerce Blocks 整合主檔案
-- `includes/nwp/nwpMPG.php` - 增強型付款閘道 (支援 Blocks + 失敗重試)
-- `assets/js/wc-blocks-checkout.js` - 前端 JavaScript 整合
-
-## 修復狀態
-
-### ✅ 已完成並生產就緒
-- 插件基本結構和 WooCommerce 整合
-- 信用卡、ATM轉帳、LINE Pay、超商代碼等支付方式
-- 藍新金流 API 整合和回調處理
-- WooCommerce Blocks 結帳完全整合
-- **智慧ATM2.0 正確參數格式** (VACC + SourceType)
-- **支付方式選擇傳遞問題徹底解決**
-- **前端與後端資料流完全打通**
-- **統一失敗處理機制** - 任何非 SUCCESS 狀態自動觸發重試付款
-- **VACC/智慧ATM2.0 取號失敗重試機制**
-- **生產環境代碼清潔**
-- **同時支援傳統結帳和 WooCommerce Blocks**
-
-### 📋 待改進項目
-- 考慮增加自動化測試覆蓋
-- 優化藍新金流回應的用戶體驗
-- 研究 WooCommerce 未來版本的相容性
-
-## 🚀 使用指南
-
-### 對於 AI 輔助開發
-1. **優先閱讀**: `docs/plugin-structure.md` 了解整體架構
-2. **開發參考**: `docs/development-guide.md` 獲取最佳實務
-3. **問題排除**: `docs/troubleshooting.md` 解決常見問題
-4. **測試工具**: `tests/` 目錄包含實用的測試腳本
-
-### 對於功能開發
-- 所有新功能都應遵循現有的 WooCommerce Blocks 整合模式
-- 智慧ATM2.0 必須使用 VACC + SourceType 格式，不是 SMARTPAY
-- 支付方式驗證時注意大小寫處理
+### 重要技術資訊
+- **智慧ATM2.0 格式**: VACC + SourceType (不是 SMARTPAY)
+- **失敗處理**: 任何非 SUCCESS 狀態自動觸發重試付款
+- **Blocks 整合**: 完全支援 WooCommerce Blocks 結帳
 
 ## 📚 關鍵文檔
 
