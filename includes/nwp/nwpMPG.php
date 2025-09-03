@@ -158,7 +158,7 @@ class WC_newebpay extends baseNwpMPG
                     $post_data['SourceType'] = $source_type;
                 }
                 if (!empty($source_bank_id)) {
-                    $post_data['SourceBankID'] = $source_bank_id;
+                    $post_data['SourceBankId'] = $source_bank_id;
                 }
                 if (!empty($source_account_no)) {
                     $post_data['SourceAccountNo'] = $source_account_no;

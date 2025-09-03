@@ -165,7 +165,7 @@ return apply_filters(
 			'title'   => __( '智慧ATM2.0', 'woocommerce' ),
 			'type'    => 'checkbox',
 			'label'   => __( '智慧ATM2.0', 'woocommerce' ),
-			'description' => __( '智慧ATM2.0 需要設定 SourceType、SourceBankID、SourceAccountNo 三個參數（需聯繫藍新金流申請）', 'woocommerce' ),
+			'description' => __( '智慧ATM2.0 需要設定 SourceType、SourceBankId、SourceAccountNo 三個參數（需聯繫藍新金流申請）', 'woocommerce' ),
 			'default' => 'no',
 			'desc_tip' => true,
 		),
@@ -175,7 +175,7 @@ return apply_filters(
 			'default' => '',
 		),
 		'SmartPaySourceBankID'  => array(
-			'title'   => __( '智慧ATM2.0 - SourceBankID', 'woocommerce' ),
+			'title'   => __( '智慧ATM2.0 - SourceBankId', 'woocommerce' ),
 			'type'    => 'text',
 			'default' => '',
 		),

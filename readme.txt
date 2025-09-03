@@ -48,7 +48,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 = 注意事項 =
 - 1.安裝此模組前，請先至藍新科技網站註冊會員，並申請相關收款服務，待服務審核通過後即可使用。
-- 2.智慧ATM2.0 為特殊支付方式，需要額外申請。啟用後需設定 SourceType、SourceBankID、SourceAccountNo 三個參數。
+- 2.智慧ATM2.0 為特殊支付方式，需要額外申請。啟用後需設定 SourceType、SourceBankId、SourceAccountNo 三個參數。
 
 
 = 聯絡我們 =
@@ -78,7 +78,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 = 1.0.9 =
 * 新增支付方式：Apple Pay、智慧ATM2.0、TWQR
-* 智慧ATM2.0：支援 SourceType、SourceBankID、SourceAccountNo 參數設定
+* 智慧ATM2.0：支援 SourceType、SourceBankId、SourceAccountNo 參數設定
 * 更新藍新金流 API 版本至 2.3（支援智慧ATM2.0功能）
 * 改善支付方式選擇機制，使用訂單元資料儲存
 * 測試並支援 WordPress 6.8 和 WooCommerce 10.1
