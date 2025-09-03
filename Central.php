@@ -15,6 +15,8 @@
  * Requires PHP: 8.0
  * WC requires at least: 8.0
  * WC tested up to: 10.1
+ * Text Domain: newebpay-payment
+ * Domain Path: /languages
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -63,7 +65,16 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 		}
 
 		public function init() {
+			// Load textdomain for translations
+			$this->load_textdomain();
 			$this->init_gateways();
+		}
+
+		/**
+		 * Load plugin textdomain for translations
+		 */
+		private function load_textdomain() {
+			load_plugin_textdomain( 'newebpay-payment', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 		}
 
 		private function init_gateways() {

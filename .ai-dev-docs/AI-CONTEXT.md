@@ -11,23 +11,52 @@
 ### 外掛檔案結構
 ```
 newebpay-payment/
-├── newebpay-payment.php    # 主要外掛檔案
-├── includes/              # 核心功能類別
-├── templates/             # 前端範本
-├── assets/               # 靜態資源
-└── languages/            # 多語言檔案
+├── Central.php                    # 主要外掛檔案 (重新命名)
+├── includes/                      # 核心功能類別
+│   ├── nwp/                      # 主要支付閘道
+│   ├── api/                      # API 相關功能
+│   ├── invoice/                  # 電子發票功能
+│   ├── blocks/                   # Gutenberg 區塊支援
+│   ├── class-newebpay-wc-blocks.php  # WooCommerce Blocks 整合
+│   └── class-newebpay-logger.php # 日誌記錄
+├── assets/                       # 靜態資源
+│   ├── js/                      # JavaScript 檔案
+│   └── css/                     # 樣式檔案
+├── languages/                    # 多語言檔案
+│   ├── newebpay-payment-zh_TW.po # 繁體中文翻譯
+│   ├── newebpay-payment-zh_TW.mo # 繁體中文編譯檔
+│   └── newebpay-payment.pot     # 翻譯模板
+└── .ai-dev-docs/                # AI 開發文檔
 ```
 
 ### 主要類別架構
 ```
-NewebPayPayment               # 主要外掛類別
-├── NewebPayGateway          # WooCommerce 閘道整合
-├── NewebPayAPI              # API 通訊處理
-├── NewebPaySecurity         # 安全性與加密
-├── NewebPayLogger           # 日誌記錄
-├── NewebPayAdmin            # 後台管理
-└── NewebPayValidator        # 資料驗證
+WC_Newebpay_Payment              # 主要外掛類別
+├── WC_newebpay                  # WooCommerce 閘道整合
+├── Newebpay_WooCommerce_Blocks_Integration # WC Blocks 支援
+├── Newebpay_Blocks              # Gutenberg 區塊支援  
+├── NewebPayAPI                  # API 通訊處理
+├── NewebPayLogger               # 日誌記錄
+└── nwpElectronicInvoice        # 電子發票功能
 ```
+
+## 🛡️ 現代化功能 (v1.0.10+)
+
+### WooCommerce Blocks 支援
+- 完整支援 WooCommerce 新式區塊結帳
+- 相容性聲明：`cart_checkout_blocks` 和 `custom_order_tables`
+- 響應式設計和無障礙網頁設計
+- 支援所有支付方式在區塊結帳中運作
+
+### 多語言本地化
+- **Text Domain**: `newebpay-payment`
+- **完整繁體中文翻譯**: 所有使用者介面、錯誤訊息、狀態通知
+- **翻譯覆蓋範圍**: 
+  - 後台管理介面
+  - 前台結帳流程
+  - API 回應訊息
+  - 電子發票功能
+- **WordPress 標準**: 使用 `load_plugin_textdomain()` 和標準 `.po/.mo` 檔案
 
 ## 🔌 WordPress 整合點
 

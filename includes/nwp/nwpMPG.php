@@ -153,8 +153,8 @@ class WC_newebpay extends baseNwpMPG
         $this->icon = apply_filters('woocommerce_newebpay_icon', plugins_url('icon/newebpay.png', dirname(dirname(__FILE__))));
 
         $this->has_fields         = true;
-        $this->method_title       = __('藍新金流', 'woocommerce');
-        $this->method_description = __('透過藍新科技整合金流輕鬆付款', 'woocommerce');
+        $this->method_title       = __('藍新金流', 'newebpay-payment');
+        $this->method_description = __('透過藍新科技整合金流輕鬆付款', 'newebpay-payment');
         
         // 宣告支援 WooCommerce Blocks
         $this->supports = array(
@@ -276,9 +276,9 @@ class WC_newebpay extends baseNwpMPG
      */
     public function admin_options()
     {
-        echo '<h1>' . _e('藍新金流 收款模組', 'woocommerce') . '</h1>';;
-        echo '<p>' . _e('此模組可以讓您使用藍新金流的收款功能', 'woocommerce') . '</p>';
-        echo '<p>' . _e('請先至藍新官網申請會員並且啟用相關支付工具', 'woocommerce') . '</p>';
+        echo '<h1>' . __('藍新金流 收款模組', 'newebpay-payment') . '</h1>';;
+        echo '<p>' . __('此模組可以讓您使用藍新金流的收款功能', 'newebpay-payment') . '</p>';
+        echo '<p>' . __('請先至藍新官網申請會員並且啟用相關支付工具', 'newebpay-payment') . '</p>';
         echo '<table class="form-table">';
         $this->generate_settings_html();
         echo '</table>';
@@ -410,7 +410,7 @@ class WC_newebpay extends baseNwpMPG
                     $post_data['SourceType'] = $source_type;
                 }
                 if (!empty($source_bank_id)) {
-                    $post_data['SourceBankID'] = $source_bank_id;
+                    $post_data['SourceBankId'] = $source_bank_id;
                 }
                 if (!empty($source_account_no)) {
                     $post_data['SourceAccountNo'] = $source_account_no;
@@ -494,7 +494,7 @@ class WC_newebpay extends baseNwpMPG
 
         if (!empty(sanitize_text_field($_REQUEST['TradeSha']))) {
             if (!$this->chkShaIsVaildByReturnData($_REQUEST)) {
-                echo '請重新填單';
+                echo __('請重新填單', 'newebpay-payment');
                 exit();
             }
             $req_data = $this->encProcess->create_aes_decrypt(
@@ -979,7 +979,7 @@ class WC_newebpay extends baseNwpMPG
         // 檢查SHA值是否正確 MPG1.4版
         if (!empty(sanitize_text_field($_REQUEST['TradeSha']))) {
             if (!$this->chkShaIsVaildByReturnData($_REQUEST)) {
-                echo 'SHA vaild fail';
+                echo __('SHA 驗證失敗', 'newebpay-payment');
                 exit; // 一定要有離開，才會被正常執行
             }
             $req_data = $this->encProcess->create_aes_decrypt(
@@ -988,7 +988,7 @@ class WC_newebpay extends baseNwpMPG
                 $this->HashIV
             );
             if (!is_array($req_data)) {
-                echo '解密失敗';
+                echo __('解密失敗', 'newebpay-payment');
                 exit; // 一定要有離開，才會被正常執行
             }
         }
@@ -1003,13 +1003,13 @@ class WC_newebpay extends baseNwpMPG
 
         $order = wc_get_order(explode("T", $re_MerchantOrderNo)[0]);
         if (!$order) {
-            echo '取得訂單失敗，訂單編號' . esc_attr($re_MerchantOrderNo);
+            echo __('取得訂單失敗，訂單編號', 'newebpay-payment') . esc_attr($re_MerchantOrderNo);
             exit();
         }
 
         $Amt = round($order->get_total());
         if ($order->is_paid()) {
-            echo '訂單已付款';
+            echo __('訂單已付款', 'newebpay-payment');
             exit(); // 已付款便不重複執行
         }
 
@@ -1180,7 +1180,7 @@ class WC_newebpay extends baseNwpMPG
      */
     public function receipt_page($order)
     {
-        echo '<p>' . __('10秒後會自動跳轉到藍新金流支付頁面，或者按下方按鈕直接前往<br>', 'newebpay') . '</p>';
+        echo '<p>' . __('10秒後會自動跳轉到藍新金流支付頁面，或者按下方按鈕直接前往<br>', 'newebpay-payment') . '</p>';
         echo $this->generate_newebpay_form(esc_attr($order));
     }
 
@@ -1271,7 +1271,7 @@ class WC_newebpay extends baseNwpMPG
         $szHtml .= '</select>';
         if ($cvscom_not_payed == 1) {
             $szHtml .= '<br><input type="checkbox" name="cvscom_not_payed" id="CVSCOMNotPayed" value="CVSCOMNotPayed">';
-            $szHtml .= '<label for="CVSCOMNotPayed">超商取貨不付款</label>';
+            $szHtml .= '<label for="CVSCOMNotPayed">' . __('超商取貨不付款', 'newebpay-payment') . '</label>';
         }
         return $szHtml;
     }
@@ -1376,10 +1376,10 @@ class WC_newebpay extends baseNwpMPG
         $payment_method = $order->get_payment_method();
 
         if ($payment_method == 'newebpay') {
-            echo '<button id="checkOrder" data-value="' . $order_id . '">至藍新更新交易狀態</button>';
+            echo '<button id="checkOrder" data-value="' . $order_id . '">' . __('至藍新更新交易狀態', 'newebpay-payment') . '</button>';
 
             if ($this->eiChk == 'yes') {
-                echo '<br><br><button id="createInvoice" data-value="' . $order_id . '">開立藍新發票</button>';
+                echo '<br><br><button id="createInvoice" data-value="' . $order_id . '">' . __('開立藍新發票', 'newebpay-payment') . '</button>';
             }
 
             // 引用js

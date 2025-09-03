@@ -53,6 +53,23 @@ flowchart TD
     H --> I[完成任務]
 ```
 
+## 🌐 本地化支援
+
+### 語言支援
+- **預設語言**: 繁體中文 (Taiwan)
+- **Text Domain**: `newebpay-payment`
+- **翻譯範圍**: 完整的前台和後台介面
+- **特色**: 插件預設即為繁體中文介面，無論在任何語言環境下都會顯示繁體中文
+
+### 翻譯檔案結構
+```
+languages/
+├── newebpay-payment.pot          # 翻譯模板
+├── newebpay-payment-zh_TW.po     # 繁體中文源文件
+├── newebpay-payment-zh_TW.mo     # 繁體中文編譯文件
+└── README.md                     # 本地化說明
+```
+
 ## 📋 開發任務分類
 
 ### � 基礎功能
@@ -92,22 +109,24 @@ flowchart TD
 
 ### 最新狀態
 - **版本**: v1.0.10
-- **狀態**: ✅ 生產環境就緒 - WooCommerce Blocks 完全整合
-- **最後更新**: 2025-09-01
-- **最新修復**: VACC/智慧ATM2.0 取號失敗重試付款機制
+- **狀態**: ✅ 生產環境就緒 - WooCommerce Blocks 完全整合 + 繁體中文本地化
+- **最後更新**: 2025-09-03
+- **最新修復**: 智慧ATM2.0 參數修正 (SourceBankId) + 完整繁體中文本地化
 
 ### 重要技術資訊
 - **智慧ATM2.0 格式**: VACC + SourceType (不是 SMARTPAY)
+- **參數名稱**: SourceBankId (注意最後是小寫 d)
 - **失敗處理**: 任何非 SUCCESS 狀態自動觸發重試付款
 - **Blocks 整合**: 完全支援 WooCommerce Blocks 結帳
+- **本地化支援**: 完整繁體中文本地化，預設即為繁體中文介面
 
 ## 📚 關鍵文檔
 
 ### 開發流程
-1. **規劃** → 檢閱 `docs/development-guide.md`
-2. **實作** → 參考 `docs/code-snippets.md`
-3. **測試** → 使用 `tests/` 目錄工具
-4. **問題排除** → 使用 `docs/troubleshooting.md`
+1. **規劃** → 檢閱 `.ai-dev-docs/` 目錄文檔
+2. **實作** → 參考 `AI-DEVELOPMENT-PATTERNS.md`
+3. **測試** → 使用 `AI-COMMON-TASKS.md` 範例
+4. **問題排除** → 查閱 `reports/` 目錄
 5. **版本記錄** → 查閱 `reports/` 目錄
 
 ## 📞 技術支援
@@ -117,7 +136,7 @@ flowchart TD
 
 ---
 
-> 💡 **提示**: 建議按照目錄結構順序閱讀文檔，先從 `docs/plugin-structure.md` 開始。
+> 💡 **提示**: 建議按照 AI 開發文檔的順序閱讀，先從 `AI-WORKFLOW.md` 開始。
 
 ## 最新修復技術要點
 
@@ -133,7 +152,7 @@ flowchart TD
 ### 智慧ATM2.0 特殊處理
 - **不是** 使用 `SMARTPAY = 1`
 - **正確格式**: `VACC = 1` + `SourceType = 4`
-- 需要額外的 `SourceBankID` 和 `SourceAccountNo` 參數
+- 需要額外的 `SourceBankId` 和 `SourceAccountNo` 參數（注意 SourceBankId 最後是小寫 d）
 
 ### 支付方式對應
 ```php
@@ -162,5 +181,5 @@ curl -sS "http://your-site.local/wp-json/newebpay/v1/payment-methods" | jq .
 ---
 
 **版本**: v1.0.10  
-**狀態**: ✅ 生產環境就緒  
-**最後驗證**: 2025-01-09
+**狀態**: ✅ 生產環境就緒 - 完整繁體中文本地化支援  
+**最後驗證**: 2025-09-03

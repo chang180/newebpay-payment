@@ -23,6 +23,11 @@
 - [解決回調問題](#解決回調問題)
 - [優化效能問題](#優化效能問題)
 
+### 🌐 現代化任務 (v1.0.10+)
+- [WooCommerce Blocks 整合](#woocommerce-blocks-整合)
+- [多語言本地化](#多語言本地化)
+- [相容性升級](#相容性升級)
+
 ---
 
 ## 🔧 基礎功能任務
@@ -595,5 +600,142 @@ private function validate_callback_source() {
     }
 }
 ```
+
+---
+
+## 🌐 現代化任務 (v1.0.10+)
+
+### WooCommerce Blocks 整合
+
+**任務描述**: 確保支付閘道在 WooCommerce 新式區塊結帳中正常運作
+
+**涉及檔案**:
+- `includes/class-newebpay-wc-blocks.php`
+- `assets/js/blocks-checkout.js`
+- `Central.php`
+
+**實作重點**:
+
+1. **相容性聲明**:
+```php
+// 在 Central.php 中
+\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 
+    'cart_checkout_blocks', 
+    __FILE__, 
+    true 
+);
+```
+
+2. **區塊整合類別**:
+```php
+// includes/class-newebpay-wc-blocks.php
+class Newebpay_WooCommerce_Blocks_Integration {
+    public function register_payment_method_type($payment_method_registry) {
+        $payment_method_registry->register(
+            new Newebpay_Blocks_Payment_Method()
+        );
+    }
+}
+```
+
+3. **前端 JavaScript 支援**:
+```javascript
+// assets/js/blocks-checkout.js
+const NewebpayPaymentMethod = {
+    name: 'newebpay',
+    label: decodeEntities(settings.title),
+    content: React.createElement(NewebpayComponent),
+    edit: React.createElement(NewebpayComponent),
+    canMakePayment: () => true,
+    ariaLabel: decodeEntities(settings.title),
+    supports: {
+        features: settings.supports,
+    },
+};
+```
+
+### 多語言本地化
+
+**任務描述**: 實作完整的多語言支援
+
+**涉及檔案**:
+- `Central.php` - 載入翻譯
+- `languages/` - 翻譯檔案
+- 所有包含使用者文字的 PHP 檔案
+
+**實作步驟**:
+
+1. **設定 Text Domain**:
+```php
+// Central.php plugin header
+ * Text Domain: newebpay-payment
+ * Domain Path: /languages
+```
+
+2. **載入翻譯**:
+```php
+// Central.php
+private function load_textdomain() {
+    load_plugin_textdomain( 
+        'newebpay-payment', 
+        false, 
+        dirname( plugin_basename( __FILE__ ) ) . '/languages/' 
+    );
+}
+```
+
+3. **文字國際化**:
+```php
+// 所有使用者可見文字
+echo __('藍新金流', 'newebpay-payment');
+$message = __('付款成功', 'newebpay-payment');
+```
+
+4. **翻譯檔案結構**:
+```
+languages/
+├── newebpay-payment.pot         # 翻譯模板
+├── newebpay-payment-zh_TW.po    # 繁體中文翻譯源檔
+└── newebpay-payment-zh_TW.mo    # 繁體中文編譯檔
+```
+
+### 相容性升級
+
+**任務描述**: 升級插件以支援最新的 WordPress 和 WooCommerce 標準
+
+**關鍵更新點**:
+
+1. **HPOS 支援**:
+```php
+\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 
+    'custom_order_tables', 
+    __FILE__, 
+    true 
+);
+```
+
+2. **現代 PHP 語法**:
+- 使用 `wp_remote_post()` 取代 `curl`
+- 適當的資料驗證和清理
+- 遵循 WordPress Coding Standards
+
+3. **安全性強化**:
+```php
+// 輸入驗證
+$order_id = absint($_POST['order_id']);
+$hash = sanitize_text_field($_POST['hash']);
+
+// 輸出轉義
+echo esc_html($message);
+echo esc_attr($value);
+```
+
+**測試檢查清單**:
+- [ ] 傳統結帳頁面正常運作
+- [ ] 區塊結帳頁面正常運作  
+- [ ] 多語言切換正確顯示
+- [ ] 所有支付方式功能完整
+- [ ] 後台設定介面翻譯完整
+- [ ] 錯誤訊息正確本地化
 
 這些範例為 AI 提供了具體的實作參考，可以快速理解如何處理各種開發任務。
