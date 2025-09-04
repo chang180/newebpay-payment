@@ -163,6 +163,12 @@ class WC_newebpay extends baseNwpMPG
                 if (!empty($source_account_no)) {
                     $post_data['SourceAccountNo'] = $source_account_no;
                 }
+            } elseif ($selected_payment === 'CVSCOMPayed') {
+                // 超商取貨付款
+                $post_data['CVSCOM'] = '2';
+            } elseif ($selected_payment === 'CVSCOMNotPayed') {
+                // 超商取貨不付款
+                $post_data['CVSCOM'] = '1';
             } else {
                 // 其他支付方式的正常處理
                 $post_data[strtoupper($selected_payment)] = 1;
@@ -177,14 +183,15 @@ class WC_newebpay extends baseNwpMPG
         
         $custom_cvscom_not_payed = $order->get_meta('_CVSCOMNotPayed') ?? '';
 
-        // 超商取貨(CVSCOM: 1:取貨不付款 2:取貨付款)
-        if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
-            $post_data['CVSCOM'] = '1';
-            if($notes[0]->comment_content == 'CVSCOMPayed'){
+        // 超商取貨的備用邏輯（如果上面的 selected_payment 沒有處理到）
+        if (empty($post_data['CVSCOM'])) {
+            if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
+                // 使用者選擇了超商取貨不付款
+                $post_data['CVSCOM'] = '1';
+            } elseif ($cvscom_payed == '1') {
+                // 使用者選擇了超商取貨付款
                 $post_data['CVSCOM'] = '2';
             }
-        } elseif ($cvscom_payed == '1' && $notes[0]->comment_content == 'CVSCOMPayed') {
-            $post_data['CVSCOM'] = '2';
         } 
 
         $aes    = $this->encProcess->create_mpg_aes_encrypt($post_data, $this->HashKey, $this->HashIV);
