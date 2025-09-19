@@ -34,6 +34,13 @@ require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-error-handler.php';
 require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-cart-manager.php';
 require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-performance-optimizer.php';
 
+// Load new handler classes
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-payment-handler.php';
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-response-handler.php';
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-form-handler.php';
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-order-handler.php';
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-blocks-handler.php';
+
 // To enable High-Performance Order Storage
 add_action(
 	'before_woocommerce_init',
