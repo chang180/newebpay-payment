@@ -12,7 +12,7 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.txt
  * Requires at least: 6.7
  * Tested up to: 6.8
- * Requires PHP: 8.0
+ * Requires PHP: 7.4
  * WC requires at least: 8.0
  * WC tested up to: 10.1
  * Text Domain: newebpay-payment
@@ -27,6 +27,12 @@ define( 'NEWEB_MAIN_PATH', dirname( __FILE__ ) );
 
 // Load Logger
 require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-logger.php';
+
+// Load new utility classes
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-validator.php';
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-error-handler.php';
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-cart-manager.php';
+require_once NEWEB_MAIN_PATH . '/includes/class-newebpay-performance-optimizer.php';
 
 // To enable High-Performance Order Storage
 add_action(

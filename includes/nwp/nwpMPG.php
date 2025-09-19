@@ -147,6 +147,12 @@ class WC_newebpay extends baseNwpMPG
      */
     public $encProcess;
 
+    /**
+     * Cart Manager instance
+     * @var Newebpay_Cart_Manager
+     */
+    private $cart_manager;
+
     public function __construct()
     {
         $this->id  = 'newebpay';
@@ -233,16 +239,8 @@ class WC_newebpay extends baseNwpMPG
         // add_filter( 'woocommerce_thankyou_page', array( $this, 'thankyou_page' ) ); // 商店付款完成頁面
         add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text'));
 
-        // 檢查是否需要清空購物車（針對後端回調的訂單）
-        add_action('wp_loaded', array($this, 'check_and_clear_cart_from_backend_callback'));
-
-        // 添加一個強制清空購物車的機制（在結帳完成頁面）
-        add_action('woocommerce_thankyou', array($this, 'force_clear_cart_on_thankyou'), 10, 1);
-
-        // 註冊購物車管理的 hooks
-        add_action('woocommerce_payment_complete', array($this, 'on_payment_complete'));
-        add_action('woocommerce_order_status_processing', array($this, 'on_order_status_processing'));
-        add_action('woocommerce_order_status_failed', array($this, 'on_order_status_failed'));
+        // 初始化購物車管理器
+        $this->cart_manager = Newebpay_Cart_Manager::get_instance();
         
         // 針對 WooCommerce Blocks 添加樣式來隱藏預設的重試按鈕
         add_action('wp_head', array($this, 'add_custom_failed_order_styles'));
@@ -311,6 +309,7 @@ class WC_newebpay extends baseNwpMPG
         $merchant_order_no = $order->get_id() . 'T' . time(); // prevent duplicate
         $order->update_meta_data('_newebpayMerchantOrderNo', $merchant_order_no);
         $order->save();
+        
         $post_data = array(
             'MerchantID'      => $this->MerchantID, // 商店代號
             'RespondType'     => 'JSON', // 回傳格式
@@ -328,6 +327,14 @@ class WC_newebpay extends baseNwpMPG
             'CustomerURL'     => $this->get_return_url($order), // 幕前(線下)
             'LangType'        => $this->LangType,
         );
+        
+        // 使用新的驗證機制
+        try {
+            $post_data = Newebpay_Validator::validate_payment_data($post_data);
+        } catch (InvalidArgumentException $e) {
+            Newebpay_Error_Handler::handle_validation_error($e->getMessage());
+            throw $e;
+        }
 
         // 取得用戶選擇的支付方式
         $selected_payment = '';
@@ -684,7 +691,9 @@ class WC_newebpay extends baseNwpMPG
 
 
             // 付款成功時立即清空購物車
-            $this->clear_cart_if_needed($order->get_id());
+            if ($this->cart_manager) {
+                $this->cart_manager->clear_cart_for_order($order->get_id());
+            }
         }
         
         // 自動登入處理 - 無論付款成功或失敗都執行，讓用戶能管理訂單和購物車
@@ -834,7 +843,9 @@ class WC_newebpay extends baseNwpMPG
                     }
 
                     // 付款成功時立即清空購物車
-                    $this->clear_cart_if_needed($order->get_id());
+                    if ($this->cart_manager) {
+                        $this->cart_manager->clear_cart_for_order($order->get_id());
+                    }
 
                     $result .= '交易成功<br>';
                 } else {
@@ -992,8 +1003,8 @@ class WC_newebpay extends baseNwpMPG
         // 檢查SHA值是否正確 MPG1.4版
         if (!empty(sanitize_text_field($_REQUEST['TradeSha']))) {
             if (!$this->chkShaIsVaildByReturnData($_REQUEST)) {
-                echo __('SHA 驗證失敗', 'newebpay-payment');
-                exit; // 一定要有離開，才會被正常執行
+                Newebpay_Error_Handler::handle_security_error(__('SHA 驗證失敗', 'newebpay-payment'));
+                return;
             }
             $req_data = $this->encProcess->create_aes_decrypt(
                 sanitize_text_field($_REQUEST['TradeInfo']),
@@ -1001,8 +1012,8 @@ class WC_newebpay extends baseNwpMPG
                 $this->HashIV
             );
             if (!is_array($req_data)) {
-                echo __('解密失敗', 'newebpay-payment');
-                exit; // 一定要有離開，才會被正常執行
+                Newebpay_Error_Handler::handle_security_error(__('解密失敗', 'newebpay-payment'));
+                return;
             }
         }
 
@@ -1082,8 +1093,8 @@ class WC_newebpay extends baseNwpMPG
         $order->update_status('processing');
 
         // 幕後回調時記錄需要清空購物車的訂單
-        // 由於後端回調沒有用戶 session，我們設置一個 transient 來標記
-        set_transient('newebpay_clear_cart_' . $order->get_id(), time(), 3600);
+        // 使用新的購物車管理器
+        $this->cart_manager->set_backend_callback_clear_flag($order->get_id());
 
         $msg   = '訂單修改成功';
         $eiChk = $this->eiChk;
@@ -1415,9 +1426,6 @@ class WC_newebpay extends baseNwpMPG
     }
     
     /**
-     * 處理付款完成事件，確保購物車被清空
-     */
-    /**
      * 控制重試付款按鈕的顯示
      */
     public function filter_retry_payment_actions($actions, $order)
@@ -1482,234 +1490,6 @@ class WC_newebpay extends baseNwpMPG
         return $statuses;
     }
     
-    /**
-     * 當付款完成時的處理
-     */
-    public function on_payment_complete($order_id)
-    {
-        $order = wc_get_order($order_id);
-
-        // 只處理藍新金流的訂單
-        if ($order && $order->get_payment_method() === 'newebpay') {
-            // 清空購物車 - 只要是藍新金流的訂單付款完成就清空
-            if (WC()->cart && !WC()->cart->is_empty()) {
-                WC()->cart->empty_cart();
-            }
-        }
-    }
-    
-    /**
-     * 當訂單狀態變為 processing 時的處理
-     */
-    public function on_order_status_processing($order_id)
-    {
-        $order = wc_get_order($order_id);
-
-        // 只處理藍新金流的訂單
-        if ($order && $order->get_payment_method() === 'newebpay') {
-            // 確保購物車被清空（成功付款的後備處理）
-            $this->clear_cart_if_needed($order_id);
-        }
-    }
-    
-    /**
-     * 當訂單狀態變為 failed 時的處理
-     */
-    public function on_order_status_failed($order_id)
-    {
-        $order = wc_get_order($order_id);
-
-        // 只處理藍新金流的訂單
-        if ($order && $order->get_payment_method() === 'newebpay') {
-            // 失敗時不清空購物車，保留商品讓用戶重試
-            // 添加日誌以便調試
-            if (function_exists('wc_get_logger')) {
-                $logger = wc_get_logger();
-                $logger->info('Order failed - cart preserved for retry', array('source' => 'newebpay-payment', 'order_id' => $order_id));
-            }
-        }
-    }
-
-    /**
-     * 輔助方法：在需要時清空購物車
-     */
-    private function clear_cart_if_needed($order_id)
-    {
-        // 檢查 WooCommerce 是否已載入
-        if (!function_exists('WC') || !WC()) {
-            return;
-        }
-
-        // 檢查 WooCommerce 購物車是否可用
-        if (!WC()->cart) {
-            return;
-        }
-
-        // 如果購物車為空，無需清空
-        if (WC()->cart->is_empty()) {
-            return;
-        }
-
-        // 檢查購物車中的商品是否與該訂單相關
-        $order = wc_get_order($order_id);
-        if (!$order) {
-            return;
-        }
-
-        // 獲取訂單商品 ID
-        $order_product_ids = array();
-        foreach ($order->get_items() as $item) {
-            $order_product_ids[] = $item->get_product_id();
-            $order_product_ids[] = $item->get_variation_id(); // 包含變體 ID
-        }
-        $order_product_ids = array_filter($order_product_ids); // 移除空值
-
-        // 獲取購物車商品 ID
-        $cart_product_ids = array();
-        foreach (WC()->cart->get_cart() as $cart_item) {
-            $cart_product_ids[] = $cart_item['product_id'];
-            if (!empty($cart_item['variation_id'])) {
-                $cart_product_ids[] = $cart_item['variation_id'];
-            }
-        }
-
-        // 檢查是否有重疊的商品
-        $matching_products = array_intersect($order_product_ids, $cart_product_ids);
-
-        // 如果有重疊商品，清空購物車
-        if (!empty($matching_products)) {
-            WC()->cart->empty_cart();
-        }
-    }
-
-    /**
-     * 在 thankyou 頁面強制清空購物車
-     */
-    public function force_clear_cart_on_thankyou($order_id)
-    {
-        if (!$order_id) {
-            return;
-        }
-
-        $order = wc_get_order($order_id);
-        if (!$order || $order->get_payment_method() !== 'newebpay') {
-            return;
-        }
-
-
-        // 只在訂單已付款或處理中時清空購物車
-        if ($order->is_paid() || in_array($order->get_status(), array('processing', 'completed'))) {
-
-            // 針對本機開發環境的特殊處理
-            // 由於 session 可能在付款跳轉過程中發生變化，我們需要更主動的清空策略
-
-            if (WC()->cart) {
-                // 強制清空購物車，即使它看起來是空的
-                // 這是因為 session 問題可能導致購物車狀態不準確
-                WC()->cart->empty_cart();
-
-                // 額外的清空措施
-                if (WC()->session) {
-                    WC()->session->set('cart', array());
-                    WC()->session->set('cart_totals', null);
-                }
-
-                // 針對登入用戶的特殊處理 - 清空持久化購物車
-                if (is_user_logged_in()) {
-                    $user_id = get_current_user_id();
-
-                    // 清空用戶的持久化購物車
-                    delete_user_meta($user_id, '_woocommerce_persistent_cart_' . get_current_blog_id());
-                    delete_user_meta($user_id, '_woocommerce_persistent_cart');
-
-                    // 清空可能的其他購物車相關 meta
-                    delete_user_meta($user_id, 'wc_cart_hash_' . md5(get_current_blog_id()));
-                }
-
-                // 添加 JavaScript 來確保前端購物車圖示也更新
-                add_action('wp_footer', function() use ($order_id) {
-                    ?>
-                    <script type="text/javascript">
-                    jQuery(document).ready(function($) {
-                        // 強制更新購物車計數器和相關元素
-                        $('.cart-contents-count, .cart-count, .cart-contents').text('0');
-                        $('.cart-contents-total, .cart-total').text('');
-                        $('.cart-empty').show();
-
-                        // 更新購物車圖標的所有可能選擇器
-                        $('.woocommerce-mini-cart__total, .cart-subtotal').hide();
-                        $('.mini-cart-counter').text('0');
-
-                        // 強制重新載入購物車片段
-                        if (typeof wc_cart_fragments_params !== 'undefined') {
-                            $.ajax({
-                                type: 'POST',
-                                url: wc_cart_fragments_params.wc_ajax_url.toString().replace( '%%endpoint%%', 'get_refreshed_fragments' ),
-                                data: {},
-                                success: function(data) {
-                                    if (data && data.fragments) {
-                                        $.each(data.fragments, function(key, value) {
-                                            $(key).replaceWith(value);
-                                        });
-                                    }
-                                }
-                            });
-                        }
-
-                        // 觸發所有可能的購物車更新事件
-                        $(document.body).trigger('wc_fragment_refresh');
-                        $(document.body).trigger('updated_wc_div');
-                        $(document.body).trigger('wc_fragments_refreshed');
-                        $(document.body).trigger('cart_page_refreshed');
-
-                        console.log('Newebpay: Cart cleared for order #<?php echo esc_js($order_id); ?>');
-                    });
-                    </script>
-                    <?php
-                });
-            }
-        }
-    }
-
-    /**
-     * 檢查後端回調標記並清空購物車
-     */
-    public function check_and_clear_cart_from_backend_callback()
-    {
-        // 只在前端執行，且用戶已登入時執行
-        if (is_admin() || !is_user_logged_in()) {
-            return;
-        }
-
-        $user_id = get_current_user_id();
-        if (!$user_id) {
-            return;
-        }
-
-        // 查找用戶最近的 newebpay 訂單
-        $recent_orders = wc_get_orders(array(
-            'customer_id' => $user_id,
-            'payment_method' => 'newebpay',
-            'status' => array('processing', 'completed'),
-            'limit' => 5,
-            'orderby' => 'date',
-            'order' => 'DESC'
-        ));
-
-        foreach ($recent_orders as $order) {
-            $clear_flag = get_transient('newebpay_clear_cart_' . $order->get_id());
-            if ($clear_flag) {
-                // 刪除標記
-                delete_transient('newebpay_clear_cart_' . $order->get_id());
-
-                // 清空購物車
-                $this->clear_cart_if_needed($order->get_id());
-
-                // 只處理一個訂單即可
-                break;
-            }
-        }
-    }
 
     /**
      * 添加自定義樣式來隱藏 WooCommerce Blocks 的預設重試按鈕
