@@ -127,12 +127,13 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			// Only load blocks if Gutenberg is available
 			if ( function_exists( 'register_block_type' ) ) {
 				include_once NEWEB_MAIN_PATH . '/includes/blocks/class-newebpay-blocks.php';
-				
+
 				// Initialize blocks after WordPress init
 				add_action( 'init', function() {
 					Newebpay_Blocks::get_instance();
 				}, 20 );
 			}
+
 		}
 	}
 
