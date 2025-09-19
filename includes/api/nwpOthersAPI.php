@@ -117,33 +117,33 @@ class nwpOthersAPI extends WC_newebpay
 
 			switch ($trade_status) {
 				case '0':
-					$status = '交易狀態:未付款';
+					$status = __('交易狀態:未付款', 'newebpay-payment');
 					break;
 				case '1':
 					$order->payment_complete();
-					$status = '交易狀態:交易成功';
+					$status = __('交易狀態:交易成功', 'newebpay-payment');
 
-					$note_text  = '<<<code>藍新金流</code>>>';
-					$note_text .= '</br>商店訂單編號：' . $data;
-					$note_text .= '</br>藍新金流支付方式：' . $this->get_payment_type_str($result['Result']['PaymentType'], !empty($result['Result']['P2GPaymentType']));
-					$note_text .= '</br>藍新金流交易序號：' . $result['Result']['TradeNo'];
+					$note_text  = '<<<code>' . __('藍新金流', 'newebpay-payment') . '</code>>>';
+					$note_text .= '</br>' . __('商店訂單編號：', 'newebpay-payment') . $data;
+					$note_text .= '</br>' . __('藍新金流支付方式：', 'newebpay-payment') . $this->get_payment_type_str($result['Result']['PaymentType'], !empty($result['Result']['P2GPaymentType']));
+					$note_text .= '</br>' . __('藍新金流交易序號：', 'newebpay-payment') . $result['Result']['TradeNo'];
 					$order->add_order_note($note_text);
 
 					break;
 
 				case '2':
-					$status = '交易狀態:付款失敗';
+					$status = __('交易狀態:付款失敗', 'newebpay-payment');
 					break;
 
 				case '3':
-					$status = '交易狀態:取消付款';
+					$status = __('交易狀態:取消付款', 'newebpay-payment');
 					break;
 			}
 
-			$echo_str = '藍新金流交易序號:' . esc_attr($result['Result']['TradeNo']) . PHP_EOL .
-				'商店支付方式:' . esc_attr($result['Result']['PaymentType']) . PHP_EOL . $status;
+			$echo_str = __('藍新金流交易序號:', 'newebpay-payment') . esc_attr($result['Result']['TradeNo']) . PHP_EOL .
+				__('商店支付方式:', 'newebpay-payment') . esc_attr($result['Result']['PaymentType']) . PHP_EOL . $status;
 		} else {
-			$echo_str = '此功能僅支援藍新金流訂單使用';
+			$echo_str = __('此功能僅支援藍新金流訂單使用', 'newebpay-payment');
 		}
 
 		wp_die($echo_str);
@@ -232,15 +232,15 @@ class nwpOthersAPI extends WC_newebpay
 					$respondDecode = json_decode($close_result['body'], true);
 
 					if ($respondDecode['Status'] == 'SUCCESS') {
-						$note_text .= '</br>本次退款金額：' . $refund_amount . '</br>退款狀態:退款請求成功';
+						$note_text .= '</br>' . __('本次退款金額：', 'newebpay-payment') . $refund_amount . '</br>' . __('退款狀態:退款請求成功', 'newebpay-payment');
 					} else {
-						$note_text .= '</br>本次退款金額：' . $refund_amount . '</br>退款狀態:退款請求失敗,錯誤代碼' . $respondDecode['Status'] . '</br>請至藍新官網查詢';
+						$note_text .= '</br>' . __('本次退款金額：', 'newebpay-payment') . $refund_amount . '</br>' . __('退款狀態:退款請求失敗,錯誤代碼', 'newebpay-payment') . $respondDecode['Status'] . '</br>' . __('請至藍新官網查詢', 'newebpay-payment');
 					}
 
 					break;
 			}
 
-			$order->add_order_note(__($note_text, 'woothemes'));
+			$order->add_order_note(__($note_text, 'newebpay-payment'));
 
 			return $respondDecode;
 		}
@@ -342,22 +342,22 @@ class nwpOthersAPI extends WC_newebpay
 				$inv_checkout = $this->inv->electronic_invoice($order, $trade_no);
 
 				if ($inv_checkout->Status == 'SUCCESS') {
-					$echo_str = '發票開立成功,回應訊息:' . sanitize_text_field($inv_checkout->Message);
+					$echo_str = __('發票開立成功,回應訊息:', 'newebpay-payment') . sanitize_text_field($inv_checkout->Message);
 				} else {
 					// 檢查是否為重複開立發票的情況
 					if (strpos($inv_checkout->Message, '該筆自訂單號已重覆開立發票') !== false) {
 						// 如果是重複開立，只添加訂單備註，不顯示錯誤訊息
-						$order->add_order_note(__('發票處理結果：發票已存在，無需重複開立', 'woothemes'));
-						$echo_str = '發票已存在，無需重複開立';
+						$order->add_order_note(__('發票處理結果：發票已存在，無需重複開立', 'newebpay-payment'));
+						$echo_str = __('發票已存在，無需重複開立', 'newebpay-payment');
 					} else {
-						$echo_str = '發票開立失敗<br>回應訊息：' . $inv_checkout->Message;
+						$echo_str = __('發票開立失敗<br>回應訊息：', 'newebpay-payment') . $inv_checkout->Message;
 					}
 				}
 			} else {
-				$echo_str = '您未啟用藍新電子發票';
+				$echo_str = __('您未啟用藍新電子發票', 'newebpay-payment');
 			}
 		} else {
-			$echo_str = '藍新平台查無此交易,請聯繫藍新金流客服';
+			$echo_str = __('藍新平台查無此交易,請聯繫藍新金流客服', 'newebpay-payment');
 		}
 
 		wp_die($echo_str);

@@ -123,7 +123,7 @@ class nwpElectronicInvoice {
 
 			if ( ! $this->chkProductInvCategoryisValid( $product, $category ) ) {
 				$orderNote = '發票開立失敗<br>錯誤訊息：' . '無法取得商品資訊';
-				$order->add_order_note( __( $orderNote, 'woothemes' ) );
+				$order->add_order_note( __( $orderNote, 'newebpay-payment' ) );
 				exit();
 			}
 
@@ -147,7 +147,7 @@ class nwpElectronicInvoice {
 
 		if ( ! $this->chkOrderInvCategoryisValid( $order, $category ) ) {
 			$orderNote = '發票開立失敗<br>錯誤訊息：' . '無法取得訂單資訊';
-			$order->add_order_note( __( $orderNote, 'woothemes' ) );
+			$order->add_order_note( __( $orderNote, 'newebpay-payment' ) );
 			exit();
 		}
 
@@ -277,7 +277,7 @@ class nwpElectronicInvoice {
 		// 檢查 wp_remote_post 是否返回錯誤
 		if ( is_wp_error( $result ) ) {
 			$orderNote = '發票開立失敗<br>網路連線錯誤：' . $result->get_error_message();
-			$order->add_order_note( __( $orderNote, 'woothemes' ) );
+			$order->add_order_note( __( $orderNote, 'newebpay-payment' ) );
 			
 			// 返回一個模擬的錯誤回應對象
 			$respondDecode = (object) array(
@@ -318,7 +318,7 @@ class nwpElectronicInvoice {
 				$orderNote = '發票開立失敗<br>錯誤訊息：' . $message;
 			}
 		}
-		$order->add_order_note( __( $orderNote, 'woothemes' ) );
+		$order->add_order_note( __( $orderNote, 'newebpay-payment' ) );
 
 		return $respondDecode;
 	}
@@ -392,15 +392,15 @@ class nwpElectronicInvoice {
 	public function electronic_invoice_fields( $checkout ) {
 		$eiChk = $this->eichk;
 		if ( $eiChk == 'yes' ) {
-			echo "<div id='electronic_invoice_fields'><h3>發票資訊</h3>";
+			echo "<div id='electronic_invoice_fields'><h3>" . __('發票資訊', 'newebpay-payment') . "</h3>";
 			woocommerce_form_field(
 				'billing_needUBN',
 				array(
 					'type'    => 'select',
-					'label'   => __( '發票是否需要打統一編號' ),
+					'label'   => __( '發票是否需要打統一編號', 'newebpay-payment' ),
 					'options' => array(
-						'0' => '否',
-						'1' => '是',
+						'0' => __( '否', 'newebpay-payment' ),
+						'1' => __( '是', 'newebpay-payment' ),
 					),
 				),
 				$checkout->get_value( 'billing_needUBN' )
@@ -411,8 +411,8 @@ class nwpElectronicInvoice {
 				'billing_UBN',
 				array(
 					'type'        => 'text',
-					'label'       => __( '<div id="UBNdiv" style="display:inline;">統一編號</div><div id="UBNdivAlert" style="display:none;color:#FF0000;">&nbsp&nbsp格式錯誤!!!</div></p>' ),
-					'placeholder' => __( '請輸入統一編號' ),
+					'label'       => __( '<div id="UBNdiv" style="display:inline;">統一編號</div><div id="UBNdivAlert" style="display:none;color:#FF0000;">&nbsp&nbsp格式錯誤!!!</div></p>', 'newebpay-payment' ),
+					'placeholder' => __( '請輸入統一編號', 'newebpay-payment' ),
 					'required'    => false,
 					'default'     => '',
 				),
@@ -422,27 +422,27 @@ class nwpElectronicInvoice {
 				'billing_Buyer',
 				array(
 					'type'        => 'text',
-					'label'       => __( '<div id="Buyerdiv" style="display:inline;">買受人名稱</div>' ),
-					'placeholder' => __( '請輸入買受人名稱' ),
+					'label'       => __( '<div id="Buyerdiv" style="display:inline;">買受人名稱</div>', 'newebpay-payment' ),
+					'placeholder' => __( '請輸入買受人名稱', 'newebpay-payment' ),
 					'required'    => false,
 					'default'     => '',
 				),
 				$checkout->get_value( 'billing_Buyer' )
 			);
-			echo '電子發票將寄送至您的電子郵件地址，請自行列印。</div>';
+			echo __('電子發票將寄送至您的電子郵件地址，請自行列印。', 'newebpay-payment') . '</div>';
 
 			echo "<div id='bifDiv'>";
 			woocommerce_form_field(
 				'billing_invoiceFlag',
 				array(
 					'type'    => 'select',
-					'label'   => __( '電子發票索取方式' ),
+					'label'   => __( '電子發票索取方式', 'newebpay-payment' ),
 					'options' => array(
-						'2'  => '會員載具',
-						'0'  => '手機條碼',
-						'1'  => '自然人憑證條碼',
-						'3'  => '捐贈發票',
-						'-1' => '索取紙本發票',
+						'2'  => __( '會員載具', 'newebpay-payment' ),
+						'0'  => __( '手機條碼', 'newebpay-payment' ),
+						'1'  => __( '自然人憑證條碼', 'newebpay-payment' ),
+						'3'  => __( '捐贈發票', 'newebpay-payment' ),
+						'-1' => __( '索取紙本發票', 'newebpay-payment' ),
 					),
 				),
 				$checkout->get_value( 'billing_invoiceFlag' )
@@ -454,15 +454,15 @@ class nwpElectronicInvoice {
 				'billing_invoiceFlagNum',
 				array(
 					'type'        => 'text',
-					'label'       => __( '<div id="ifNumDiv">載具編號</div>' ),
-					'placeholder' => __( '電子發票通知將寄送至您的電子郵件地址' ),
+					'label'       => __( '<div id="ifNumDiv">載具編號</div>', 'newebpay-payment' ),
+					'placeholder' => __( '電子發票通知將寄送至您的電子郵件地址', 'newebpay-payment' ),
 					'required'    => false,
 					'default'     => '',
 				),
 				$checkout->get_value( 'billing_invoiceFlagNum' )
 			);
 			echo '</div>';
-			echo "<div id='bifnDivAlert' style='display:none;color:#FF0000;'>請輸入載具編號</div>";
+			echo "<div id='bifnDivAlert' style='display:none;color:#FF0000;'>" . __('請輸入載具編號', 'newebpay-payment') . "</div>";
 			echo '</div>';
 		}
 		return $checkout;
@@ -509,7 +509,7 @@ class nwpElectronicInvoice {
 						$orderNote .= '會員載具 <br>載具編號： ' . $invoiceFlagNum;
 				}
 			}
-			$order->add_order_note( __( $orderNote, 'woothemes' ) );
+			$order->add_order_note( __( $orderNote, 'newebpay-payment' ) );
 		}
 
 		// Hidden Custom Fields: keys starting with an "_".

@@ -26,6 +26,9 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 - 現代 WooCommerce Blocks 結帳系統
 - 完全相容兩種結帳方式
 
+**本地化支援**：
+- 繁體中文 (Taiwan) - 完整本地化支援
+
 藍新金流提供付款方支付頁面採「響應式網頁設計(Responsive Web Design,簡稱RWD)」。
 不論付款方使用之裝置為電腦、平版、手機等不同上網設備，藍新金流付款方支付頁將視付款方瀏覽器之螢幕大小，自動調整至最適合付款方瀏覽及操作之介面，讓交易資訊在不同大小螢幕上都能一目了然。
 使操作介面更友善、支付更快速，提升良好的使用者經驗。
@@ -55,7 +58,47 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 = 注意事項 =
 - 1.安裝此模組前，請先至藍新科技網站註冊會員，並申請相關收款服務，待服務審核通過後即可使用。
-- 2.智慧ATM2.0 為特殊支付方式，需要額外申請。啟用後需設定 SourceType、SourceBankID、SourceAccountNo 三個參數。
+- 2.智慧ATM2.0 為特殊支付方式，需要額外申請。啟用後需設定 SourceType、SourceBankId、SourceAccountNo 三個參數。
+
+= 本地化支援 =
+
+本插件提供繁體中文完整本地化支援：
+
+**支援語言：**
+- 繁體中文 (Taiwan) - 完整本地化翻譯
+
+**翻譯範圍：**
+- 完整的後台管理介面翻譯
+- 所有前台使用者介面文字翻譯
+- 錯誤訊息和狀態通知翻譯
+- 支付方式名稱和說明翻譯
+- 電子發票相關功能翻譯
+- API 回應訊息翻譯
+
+**技術資訊：**
+- Text Domain: `newebpay-payment`
+- 翻譯檔案位置: `/languages/`
+- 支援 WordPress 標準國際化機制
+
+= WooCommerce Blocks 支援 =
+
+完整支援 WooCommerce 新式區塊結帳系統：
+
+**功能特點：**
+- 完全相容區塊結帳頁面
+- 響應式設計適應各種裝置
+- 與傳統結帳頁面並存
+- 支援所有藍新金流支付方式
+
+**相容性：**
+- 已聲明與 WooCommerce HPOS 相容
+- 已聲明與 WooCommerce Blocks 相容
+- 支援最新 WooCommerce 版本
+
+**使用方式：**
+1. 前往 WooCommerce → 設定 → 進階 → 功能
+2. 啟用「使用區塊樣式的結帳頁面」
+3. 藍新金流將自動在區塊結帳中正常運作
 
 
 = 聯絡我們 =
@@ -84,18 +127,21 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 == Changelog ==
 
 = 1.0.10 =
-* 新功能：完整支援 WooCommerce Blocks 結帳系統
-* 新功能：現代化區塊結帳介面整合，支援所有付款方式
-* 改進：智慧ATM2.0 參數自動轉換 (smartpay ↔ SmartPay)
-* 改進：同時支援傳統結帳和 WooCommerce Blocks 結帳
-* 改進：JavaScript API 更新為現代 onPaymentSetup 方法
-* 改進：完善的錯誤處理和降級機制
-* 最佳化：移除開發和調試代碼，生產環境就緒
-* 相容性：測試並支援最新的 WooCommerce Blocks 11.0+
+* 新增完整 WooCommerce Blocks 支援
+* 新增 Gutenberg 區塊編輯器支援  
+* 新增繁體中文完整本地化版本，翻譯所有使用者介面
+* 正確設定文本域 (Text Domain) 為 'newebpay-payment'
+* 新增 languages 資料夾，包含 .po/.mo/.pot 翻譯文件
+* 實現完整的繁體中文本地化支援
+* 宣告與 WooCommerce HPOS (High-Performance Order Storage) 相容性
+* 宣告與 WooCommerce Blocks 結帳系統相容性
+* 改善支付方式選擇機制，使用訂單元資料儲存
+* 測試並支援 WordPress 6.8 和 WooCommerce 10.1
+* 優化後台設定介面說明文字
 
 = 1.0.9 =
 * 新增支付方式：Apple Pay、智慧ATM2.0、TWQR
-* 智慧ATM2.0：支援 SourceType、SourceBankID、SourceAccountNo 參數設定
+* 智慧ATM2.0：支援 SourceType、SourceBankId、SourceAccountNo 參數設定
 * 更新藍新金流 API 版本至 2.3（支援智慧ATM2.0功能）
 * 改善支付方式選擇機制，使用訂單元資料儲存
 * 測試並支援 WordPress 6.8 和 WooCommerce 10.1
