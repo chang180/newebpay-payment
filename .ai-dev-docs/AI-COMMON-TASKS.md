@@ -22,6 +22,7 @@
 - [修復支付錯誤](#修復支付錯誤)
 - [解決回調問題](#解決回調問題)
 - [優化效能問題](#優化效能問題)
+- [修復購物車清空問題](#修復購物車清空問題)
 
 ### 🌐 現代化任務 (v1.0.10+)
 - [WooCommerce Blocks 整合](#woocommerce-blocks-整合)
@@ -737,5 +738,140 @@ echo esc_attr($value);
 - [ ] 所有支付方式功能完整
 - [ ] 後台設定介面翻譯完整
 - [ ] 錯誤訊息正確本地化
+
+---
+
+## 🛒 修復購物車清空問題
+
+**任務描述**: 修復 Newebpay 付款完成後購物車未正確清空的問題
+
+**問題症狀**:
+- 付款完成後購物車仍顯示已付款商品
+- 特別影響登入用戶的持久化購物車
+- 本機開發環境更容易出現此問題
+
+**涉及檔案**:
+- `includes/nwp/nwpMPG.php` (主要修改)
+- `assets/js/wc-blocks-checkout.js` (前端同步)
+
+**實作步驟**:
+
+### 1. 添加強制清空機制
+
+```php
+// 在 nwpMPG.php 中添加
+public function force_clear_cart_on_thankyou($order_id) {
+    if (!$order_id) return;
+
+    $order = wc_get_order($order_id);
+    if (!$order || $order->get_payment_method() !== 'newebpay') return;
+
+    if ($order->is_paid() || in_array($order->get_status(), array('processing', 'completed'))) {
+        if (WC()->cart) {
+            // 強制清空購物車
+            WC()->cart->empty_cart();
+
+            // 清空 session
+            if (WC()->session) {
+                WC()->session->set('cart', array());
+                WC()->session->set('cart_totals', null);
+            }
+
+            // 登入用戶持久化購物車清空
+            if (is_user_logged_in()) {
+                $user_id = get_current_user_id();
+                delete_user_meta($user_id, '_woocommerce_persistent_cart_' . get_current_blog_id());
+                delete_user_meta($user_id, '_woocommerce_persistent_cart');
+                delete_user_meta($user_id, 'wc_cart_hash_' . md5(get_current_blog_id()));
+            }
+        }
+    }
+}
+```
+
+### 2. 註冊 Hook
+
+```php
+// 在 __construct() 中添加
+add_action('woocommerce_thankyou', array($this, 'force_clear_cart_on_thankyou'), 10, 1);
+```
+
+### 3. 前端 JavaScript 同步
+
+```php
+// 在 force_clear_cart_on_thankyou 中添加 JavaScript
+add_action('wp_footer', function() use ($order_id) {
+    ?>
+    <script type="text/javascript">
+    jQuery(document).ready(function($) {
+        // 強制更新購物車計數器
+        $('.cart-contents-count, .cart-count, .cart-contents').text('0');
+        $('.cart-contents-total, .cart-total').text('');
+
+        // 強制重新載入購物車片段
+        if (typeof wc_cart_fragments_params !== 'undefined') {
+            $.ajax({
+                type: 'POST',
+                url: wc_cart_fragments_params.wc_ajax_url.toString().replace('%%endpoint%%', 'get_refreshed_fragments'),
+                success: function(data) {
+                    if (data && data.fragments) {
+                        $.each(data.fragments, function(key, value) {
+                            $(key).replaceWith(value);
+                        });
+                    }
+                }
+            });
+        }
+
+        // 觸發購物車更新事件
+        $(document.body).trigger('wc_fragment_refresh');
+        $(document.body).trigger('wc_fragments_refreshed');
+    });
+    </script>
+    <?php
+});
+```
+
+**測試方法**:
+1. 登入用戶進行付款測試
+2. 訪客用戶進行付款測試
+3. 檢查付款完成後購物車狀態
+4. 驗證前端購物車圖示更新
+
+**常見問題**:
+- **問題**: 本機環境購物車未清空
+  **解決**: 使用 transient 標記機制處理後端回調
+- **問題**: 登入用戶購物車殘留
+  **解決**: 清空持久化購物車 user_meta
+- **問題**: 前端顯示未更新
+  **解決**: 觸發 WooCommerce 片段刷新事件
+
+**相關文檔**: 參考 `reports/購物車清空機制修復報告.md` 了解完整技術細節
+
+---
+
+## 📝 任務執行原則
+
+### 開發前準備
+1. 閱讀相關技術文檔
+2. 了解現有程式碼結構
+3. 備份重要檔案
+4. 建立測試環境
+
+### 開發中注意
+1. 遵循既有的程式碼風格
+2. 添加適當的錯誤處理
+3. 撰寫清楚的註解
+4. 進行單元測試
+
+### 開發後驗證
+1. 功能測試
+2. 相容性測試
+3. 效能測試
+4. 安全性檢查
+
+---
+
+> 💡 **提示**: 每個任務都應該參考 `AI-DEVELOPMENT-PATTERNS.md` 中的開發模式，確保代碼品質和一致性。
 
 這些範例為 AI 提供了具體的實作參考，可以快速理解如何處理各種開發任務。
