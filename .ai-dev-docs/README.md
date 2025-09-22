@@ -253,3 +253,4 @@ curl -sS "http://your-site.local/wp-json/newebpay/v1/payment-methods" | jq .
 **版本**: v1.0.10  
 **狀態**: ✅ 生產環境就緒 - 完整架構重構 + 錯誤修復  
 **最後驗證**: 2025-01-27
+**測試提交**: 這是一個測試提交，用來驗證 git 推送機制
