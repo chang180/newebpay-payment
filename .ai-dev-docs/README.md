@@ -120,6 +120,7 @@ languages/
 - **Blocks 整合**: 完全支援 WooCommerce Blocks 結帳
 - **本地化支援**: 完整繁體中文本地化，預設即為繁體中文介面
 - **購物車清空**: 多層保護機制確保付款完成後購物車正確清空
+- **外掛相依性**: Requires Plugins: woocommerce:8.0 - 確保與 WooCommerce 8.0+ 版本相容
 
 ## 🏗️ 最新架構 (v1.0.10)
 

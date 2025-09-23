@@ -12,11 +12,10 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.txt
  * Requires at least: 6.7
  * Tested up to: 6.8
- * Requires PHP: 7.4
+ * Requires PHP: 8.0
+ * Requires Plugins: woocommerce:8.0
  * WC requires at least: 8.0
- * WC tested up to: 10.1
- * Text Domain: newebpay-payment
- * Domain Path: /languages
+ * WC tested up to: 10.2.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
