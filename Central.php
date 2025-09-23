@@ -16,6 +16,8 @@
  * Requires Plugins: woocommerce:8.0
  * WC requires at least: 8.0
  * WC tested up to: 10.2.1
+ * Text Domain: newebpay-payment
+ * Domain Path: /languages
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
