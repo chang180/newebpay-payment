@@ -6,7 +6,7 @@ Tested up to: 6.8
 Requires PHP: 8.0
 WC requires at least: 8.0
 WC tested up to: 10.1
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,13 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 == Frequently Asked Questions ==
 
 == Changelog ==
+
+= 1.0.10 =
+* 修復信用卡退款功能
+* 修正退款 API 使用錯誤的訂單編號問題（改用藍新交易編號）
+* 修正退款索引方式，改用 TradeNo 索引提高成功率
+* 改用 cURL 發送退款請求，解決部分環境被 WAF 阻擋的問題
+* 改善退款錯誤訊息顯示
 
 = 1.0.9 =
 * 新增支付方式：Apple Pay、智慧ATM2.0、TWQR
