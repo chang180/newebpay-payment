@@ -155,20 +155,31 @@ class Newebpay_Payment_Handler
             return;
         }
 
-        // 智慧ATM2.0 特殊處理
-        if (strtolower($selected_payment) === 'smartpay') {
+        // 智慧ATM2.0 特殊處理 - 使用 VACC 參數加上額外參數
+        if ($selected_payment === 'SmartPay') {
             $post_data['VACC'] = 1;
             
+            // 取得智慧ATM2.0的設定參數
+            $source_type = trim($this->gateway->get_option('SmartPaySourceType'));
+            $source_bank_id = trim($this->gateway->get_option('SmartPaySourceBankId'));
+            $source_account_no = trim($this->gateway->get_option('SmartPaySourceAccountNo'));
+            
             // 加入智慧ATM2.0必要參數
-            if (!empty($this->gateway->SmartPaySourceType)) {
-                $post_data['SourceType'] = $this->gateway->SmartPaySourceType;
+            if (!empty($source_type)) {
+                $post_data['SourceType'] = $source_type;
             }
-            if (!empty($this->gateway->SmartPaySourceBankID)) {
-                $post_data['SourceBankId'] = $this->gateway->SmartPaySourceBankID;
+            if (!empty($source_bank_id)) {
+                $post_data['SourceBankId'] = $source_bank_id;
             }
-            if (!empty($this->gateway->SmartPaySourceAccountNo)) {
-                $post_data['SourceAccountNo'] = $this->gateway->SmartPaySourceAccountNo;
+            if (!empty($source_account_no)) {
+                $post_data['SourceAccountNo'] = $source_account_no;
             }
+        } elseif ($selected_payment === 'CVSCOMPayed') {
+            // 超商取貨付款
+            $post_data['CVSCOM'] = '2';
+        } elseif ($selected_payment === 'CVSCOMNotPayed') {
+            // 超商取貨不付款
+            $post_data['CVSCOM'] = '1';
         } else {
             // 其他付款方式的正常處理
             $post_data[strtoupper($selected_payment)] = 1;
@@ -183,25 +194,20 @@ class Newebpay_Payment_Handler
      */
     private function apply_cvscom_settings(&$post_data, $order)
     {
-        $get_select_payment = $this->get_available_payment_methods();
-        $cvscom_payed = $get_select_payment['CVSCOMPayed'] ?? '';
-        $cvscom_not_payed = $get_select_payment['CVSCOMNotPayed'] ?? '';
-        $custom_cvscom_not_payed = $order->get_meta('_CVSCOMNotPayed') ?? '';
+        // 超商取貨的備用邏輯（如果上面的 selected_payment 沒有處理到）
+        if (empty($post_data['CVSCOM'])) {
+            $get_select_payment = $this->get_available_payment_methods();
+            $cvscom_payed = $get_select_payment['CVSCOMPayed'] ?? '';
+            $cvscom_not_payed = $get_select_payment['CVSCOMNotPayed'] ?? '';
+            $custom_cvscom_not_payed = $order->get_meta('_CVSCOMNotPayed') ?? '';
 
-        // 取得訂單備註
-        $notes = wc_get_order_notes(array(
-            'order_id' => $order->get_id(),
-            'type' => 'customer'
-        ));
-
-        // 超商取貨設定
-        if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
-            $post_data['CVSCOM'] = '1';
-            if (!empty($notes) && isset($notes[0]->comment_content) && $notes[0]->comment_content == 'CVSCOMPayed') {
+            if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
+                // 使用者選擇了超商取貨不付款
+                $post_data['CVSCOM'] = '1';
+            } elseif ($cvscom_payed == '1') {
+                // 使用者選擇了超商取貨付款
                 $post_data['CVSCOM'] = '2';
             }
-        } elseif ($cvscom_payed == '1' && !empty($notes) && isset($notes[0]->comment_content) && $notes[0]->comment_content == 'CVSCOMPayed') {
-            $post_data['CVSCOM'] = '2';
         }
     }
 

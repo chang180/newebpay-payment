@@ -210,26 +210,21 @@ class nwpOthersAPI extends WC_newebpay
 						'RespondType'     => 'JSON',
 						'Version'         => '1.1',
 						'Amt'             => $refund_amount,
-						'MerchantOrderNo' => $order_id,
+						'MerchantOrderNo' => $order->get_meta('_newebpayMerchantOrderNo'),
 						'TimeStamp'       => time(),
-						'IndexType'       => ($order_id == '') ? '2' : '1',
+						'IndexType'       => '2',
 						'TradeNo'         => $result['Result']['TradeNo'],
 						'CloseType'       => '2',
 					);
 
 					$aes = $this->encProcess->create_mpg_aes_encrypt($query, $this->HashKey, $this->HashIV);
 
-					$post_data = http_build_query(
-						array(
-							'body' => array(
-								'MerchantID_' => $this->MerchantID,
-								'PostData_'   => $aes,
-							),
-						)
-					);
-
-					$close_result  = wp_remote_post($api_url, $post_data);
-					$respondDecode = json_decode($close_result['body'], true);
+				$curl_body = http_build_query(array(
+					'MerchantID_' => $this->MerchantID,
+					'PostData_'   => $aes,
+				));
+				$curl_result = $this->curl_($api_url, $curl_body);
+				$respondDecode = json_decode($curl_result['web_info'], true);
 
 					if ($respondDecode['Status'] == 'SUCCESS') {
 						$note_text .= '</br>' . __('本次退款金額：', 'newebpay-payment') . $refund_amount . '</br>' . __('退款狀態:退款請求成功', 'newebpay-payment');

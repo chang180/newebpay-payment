@@ -161,22 +161,22 @@ return apply_filters(
 			'label'   => __( 'Apple Pay', 'newebpay-payment' ),
 			'default' => 'no',
 		),
-		'NwpPaymentMethodSmartPay'  => array(
-			'title'   => __( '智慧ATM2.0', 'newebpay-payment' ),
-			'type'    => 'checkbox',
-			'label'   => __( '智慧ATM2.0', 'newebpay-payment' ),
-			'description' => __( '智慧ATM2.0 需要設定 SourceType、SourceBankId、SourceAccountNo 三個參數（需聯繫藍新金流申請）', 'newebpay-payment' ),
-			'default' => 'no',
-			'desc_tip' => true,
-		),
-		'SmartPaySourceType'  => array(
-			'title'   => __( '智慧ATM2.0 - SourceType', 'newebpay-payment' ),
-			'type'    => 'text',
-			'default' => '',
-		),
-		'SmartPaySourceBankID'  => array(
-			'title'   => __( '智慧ATM2.0 - SourceBankId', 'newebpay-payment' ),
-			'type'    => 'text',
+	'NwpPaymentMethodSmartPay'  => array(
+		'title'   => __( '智慧ATM2.0', 'newebpay-payment' ),
+		'type'    => 'checkbox',
+		'label'   => __( '智慧ATM2.0', 'newebpay-payment' ),
+		'description' => __( '智慧ATM2.0 需要設定 SourceType、SourceBankId、SourceAccountNo 三個參數（需聯繫藍新金流申請）', 'newebpay-payment' ),
+		'default' => 'no',
+		'desc_tip' => true,
+	),
+	'SmartPaySourceType'  => array(
+		'title'   => __( '智慧ATM2.0 - SourceType', 'newebpay-payment' ),
+		'type'    => 'text',
+		'default' => '',
+	),
+	'SmartPaySourceBankId'  => array(
+		'title'   => __( '智慧ATM2.0 - SourceBankId', 'newebpay-payment' ),
+		'type'    => 'text',
 			'default' => '',
 		),
 		'SmartPaySourceAccountNo'  => array(

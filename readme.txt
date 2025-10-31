@@ -138,6 +138,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 * 改善支付方式選擇機制，使用訂單元資料儲存
 * 測試並支援 WordPress 6.8 和 WooCommerce 10.1
 * 優化後台設定介面說明文字
+* 修復信用卡退款功能
+* 修正退款 API 使用錯誤的訂單編號問題（改用藍新交易編號）
+* 修正退款索引方式，改用 TradeNo 索引提高成功率
+* 改用 cURL 發送退款請求，解決部分環境被 WAF 阻擋的問題
+* 改善退款錯誤訊息顯示
 
 = 1.0.9 =
 * 新增支付方式：Apple Pay、智慧ATM2.0、TWQR
