@@ -2,7 +2,7 @@
  * WordPress Block Editor for Newebpay Payment Methods
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  * @author Newebpay
  */
 

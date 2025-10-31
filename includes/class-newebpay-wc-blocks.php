@@ -4,7 +4,7 @@
  * 支援 WooCommerce 區塊結帳系統
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -255,7 +255,7 @@ class Newebpay_WooCommerce_Blocks_Integration {
             'count' => count( $methods ),
             'cvscom_not_payed' => $cvscom_not_payed,
             'source' => 'rest_api',
-            'version' => '1.0.10'
+            'version' => '1.1.0'
         ), 200 );
     }
     
@@ -500,7 +500,7 @@ class Newebpay_WooCommerce_Blocks_Integration {
             'data' => $methods,
             'count' => count( $methods ),
             'source' => 'ajax',
-            'version' => '1.0.10'
+            'version' => '1.1.0'
         ) ) );
     }
     

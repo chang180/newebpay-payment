@@ -6,7 +6,7 @@ Tested up to: 6.8
 Requires PHP: 8.0
 WC requires at least: 8.0
 WC tested up to: 10.1
-Stable tag: 1.0.10
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 藍新金流購物車外掛模組，提供合作特店與個人會員使用開放原始碼商店系統時，透過外掛套件快速完成界接藍新科技金流系統。
 
-✨ **v1.0.10 新功能**：完整支援 WooCommerce Blocks 結帳系統，提供現代化的區塊結帳體驗。
+✨ **v1.1.0 新功能**：完整支援 WooCommerce Blocks 結帳系統，提供現代化的區塊結帳體驗。
 
 藍新金流整合各種金流工具，讓商店簡易、快速地串接使用。
 不論代收模式(指由藍新撥款商店)，或閘道模式(指收單機構撥款商店)，皆能提供商店消費者多元支付方式，讓商店整合帳務輕鬆收款，針對各種支付場景彈性配置。
@@ -126,7 +126,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 == Changelog ==
 
-= 1.0.10 =
+= 1.1.0 =
 * 新增完整 WooCommerce Blocks 支援
 * 新增 Gutenberg 區塊編輯器支援  
 * 新增繁體中文完整本地化版本，翻譯所有使用者介面

@@ -2,7 +2,7 @@
  * Frontend JavaScript for Newebpay Payment Blocks
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  * @author Newebpay
  */
 

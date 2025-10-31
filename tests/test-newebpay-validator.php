@@ -3,7 +3,7 @@
  * Newebpay Validator 單元測試
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 // 載入必要的檔案

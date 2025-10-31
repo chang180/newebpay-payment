@@ -2,7 +2,7 @@
  * Newebpay WooCommerce Blocks 結帳整合
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 const { createElement, useState, useEffect } = window.wp.element;

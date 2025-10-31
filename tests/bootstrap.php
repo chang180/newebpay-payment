@@ -3,7 +3,7 @@
  * WordPress 測試環境 Bootstrap
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 // 設定測試環境

@@ -5,7 +5,7 @@
  * Plugin Name: Newebpay Payment
  * Plugin URI: http://www.newebpay.com/
  * Description: NewebPay Payment for WooCommerce
- * Version: 1.0.10
+ * Version: 1.1.0
  * Author: Neweb Technologies Co., Ltd.
  * Author URI: https://www.newebpay.com/website/Page/content/download_api#2
  * License: GPLv2

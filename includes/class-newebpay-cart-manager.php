@@ -4,7 +4,7 @@
  * 優化購物車清空邏輯，減少資料庫查詢
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

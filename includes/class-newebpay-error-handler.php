@@ -4,7 +4,7 @@
  * 提供統一的錯誤處理和記錄機制
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

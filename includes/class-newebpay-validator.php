@@ -4,7 +4,7 @@
  * 提供統一的資料驗證和安全性檢查
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

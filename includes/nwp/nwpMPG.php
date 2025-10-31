@@ -49,7 +49,7 @@ class WC_newebpay extends baseNwpMPG
      * Smart Pay Source Bank ID
      * @var string
      */
-    public $SmartPaySourceBankID;
+    public $SmartPaySourceBankId;
 
     /**
      * Smart Pay Source Account No

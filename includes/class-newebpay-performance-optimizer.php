@@ -4,7 +4,7 @@
  * 減少不必要的 Hook 註冊和優化資料庫查詢
  * 
  * @package NeWebPay_Payment
- * @version 1.0.10
+ * @version 1.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

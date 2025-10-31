@@ -425,7 +425,7 @@ class Newebpay_Blocks {
             'data' => $methods,
             'count' => count( $methods ),
             'source' => 'rest_api',
-            'version' => '1.0.10'
+            'version' => '1.1.0'
         ), 200 );
     }
     
@@ -435,12 +435,12 @@ class Newebpay_Blocks {
     public function api_get_status( $request ) {
         return new WP_REST_Response( array(
             'success' => true,
-            'plugin_version' => '1.0.10',
-            'blocks_version' => '1.0.10',
+            'plugin_version' => '1.1.0',
+            'blocks_version' => '1.1.0',
             'wordpress_version' => get_bloginfo( 'version' ),
             'woocommerce_active' => class_exists( 'WooCommerce' ),
             'blocks_registered' => count( $this->blocks ),
-            'version' => '1.0.10'
+            'version' => '1.1.0'
         ), 200 );
     }
     

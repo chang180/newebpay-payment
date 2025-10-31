@@ -1,7 +1,7 @@
 {
     "apiVersion": 2,
     "name": "newebpay/payment-methods",
-    "version": "1.0.10",
+    "version": "1.1.0",
     "title": "Newebpay 付款方式",
     "category": "newebpay",
     "icon": "money-alt",

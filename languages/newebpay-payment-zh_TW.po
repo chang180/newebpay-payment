@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the Newebpay Payment package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Newebpay Payment 1.0.10\n"
+"Project-Id-Version: Newebpay Payment 1.1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-09-03 12:00+0000\n"
 "PO-Revision-Date: 2025-09-03 12:00+0000\n"
