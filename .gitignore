@@ -44,3 +44,16 @@ vendor/
 
 # Cache files
 *.cache
+
+# Test files and coverage
+tests/coverage/
+tests/debug-test.php
+tests/setup-*.ps1
+tests/setup-*.sh
+tests/run-tests.php
+tests/standalone-test.php
+tests/ide-helper.php
+tests/phpunit-stubs.php
+
+# Composer lock (for development)
+composer.lock
