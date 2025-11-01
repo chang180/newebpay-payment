@@ -136,8 +136,7 @@ class Newebpay_WooCommerce_Blocks_Integration {
             'apiUrl' => rest_url( 'newebpay/v1' ),
             'nonce' => wp_create_nonce( 'newebpay_blocks_nonce' ),
             'supportsFeatures' => array(
-                'products',
-                'refunds'
+                'products'
             )
         ) );
         

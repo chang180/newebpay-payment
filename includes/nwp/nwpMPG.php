@@ -195,7 +195,6 @@ class WC_newebpay extends baseNwpMPG
         // 宣告支援 WooCommerce Blocks
         $this->supports = array(
             'products',
-            'refunds',
             'add_payment_method',
             'subscriptions',
             'subscription_cancellation',
