@@ -156,8 +156,11 @@ class Newebpay_Payment_Handler
             return;
         }
 
+        // 統一轉換為小寫進行比較，避免大小寫不一致問題
+        $selected_payment_lower = strtolower($selected_payment);
+        
         // 智慧ATM2.0 特殊處理 - 使用 VACC 參數加上額外參數
-        if ($selected_payment === 'SmartPay') {
+        if ($selected_payment_lower === 'smartpay') {
             $post_data['VACC'] = 1;
             
             // 取得智慧ATM2.0的設定參數
@@ -175,13 +178,13 @@ class Newebpay_Payment_Handler
             if (!empty($source_account_no)) {
                 $post_data['SourceAccountNo'] = $source_account_no;
             }
-        } elseif ($selected_payment === 'CVSCOMPayed') {
+        } elseif ($selected_payment_lower === 'cvscompayed') {
             // 超商取貨付款
             $post_data['CVSCOM'] = '2';
-        } elseif ($selected_payment === 'CVSCOMNotPayed') {
+        } elseif ($selected_payment_lower === 'cvscomnotpayed') {
             // 超商取貨不付款
             $post_data['CVSCOM'] = '1';
-        } elseif ($selected_payment === 'Inst') {
+        } elseif ($selected_payment_lower === 'inst') {
             // 信用卡分期付款特殊處理
             // 信用卡分期是一種獨立的付款方式，只需要設置 InstFlag 參數
             // 嘗試從訂單 meta 取得用戶選擇的分期期數
@@ -251,7 +254,10 @@ class Newebpay_Payment_Handler
             'androidpay' => 'AndroidPay',
             'samsungpay' => 'SamsungPay',
             'applepay' => 'APPLEPAY',
-            'smartpay' => 'SmartPay'
+            'smartpay' => 'SmartPay',
+            'inst' => 'Inst',
+            'creditred' => 'CreditRed',
+            'unionpay' => 'UnionPay'
         );
         
         $payment_config_key = $payment_config_map[strtolower($selected_payment)] ?? strtoupper($selected_payment);
