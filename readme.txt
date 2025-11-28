@@ -6,7 +6,7 @@ Tested up to: 6.8
 Requires PHP: 8.0
 WC requires at least: 8.0
 WC tested up to: 10.1
-Stable tag: 1.0.10
+Stable tag: 1.0.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 == Frequently Asked Questions ==
 
 == Changelog ==
+
+= 1.0.11 =
+* 修正信用卡分期付款 InstFlag 參數設定問題
+* 修正選擇信用卡分期付款時，正確設置 InstFlag 參數以顯示分期選項
 
 = 1.0.10 =
 * 修復信用卡退款功能
