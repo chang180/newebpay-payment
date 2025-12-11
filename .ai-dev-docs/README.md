@@ -19,6 +19,7 @@
 │   ├── test-smartpay-integration.php  # 智慧ATM2.0 整合測試
 │   └── debug-payment-flow.php         # 支付流程除錯工具
 └── reports/                   # 📊 版本開發報告
+    ├── v1.0.11-ATM轉帳顯示修正報告.md # v1.0.11 ATM 轉帳顯示修正
     ├── 智慧ATM2.0整合報告.md          # v1.0.9 智慧ATM2.0 功能整合
     └── README版本更新報告.md          # readme.txt 版本支援度更新
 ```
@@ -39,6 +40,7 @@
 - **[debug-payment-flow.php](./tests/debug-payment-flow.php)** - 支付流程除錯分析
 
 ### 📊 開發報告 (`reports/`)
+- **[v1.0.11-ATM轉帳顯示修正報告.md](./reports/v1.0.11-ATM轉帳顯示修正報告.md)** - v1.0.11 ATM 轉帳顯示修正
 - **[智慧ATM2.0整合報告.md](./reports/智慧ATM2.0整合報告.md)** - v1.0.9 新功能開發完整記錄
 - **[README版本更新報告.md](./reports/README版本更新報告.md)** - WordPress/WooCommerce 版本支援更新
 
@@ -46,8 +48,10 @@
 
 **Newebpay Payment** 是一個為 WooCommerce 設計的藍新科技金流整合插件。
 
-### 當前版本：v1.0.9
-- ✅ 新增：Apple Pay、智慧ATM2.0、TWQR
+### 當前版本：v1.0.11
+- ✅ 修正：ATM 轉帳取號成功頁面顯示問題
+- ✅ 修正：信用卡分期付款 InstFlag 參數設定
+- ✅ 改善：ATM 轉帳訂單狀態處理邏輯
 - ✅ 更新：API 版本 2.3
 - ✅ 支援：WordPress 6.8、WooCommerce 10.1
 - ✅ 要求：PHP 8.0+
