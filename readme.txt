@@ -145,6 +145,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 * 改善退款錯誤訊息顯示
 * 修正信用卡分期付款 InstFlag 參數設定問題
 * 修正選擇信用卡分期付款時，正確設置 InstFlag 參數以顯示分期選項
+* 修正 ATM 轉帳完成取號後回傳頁面顯示問題
+* 改善 ATM 轉帳取號成功頁面，正確顯示銀行代碼和繳費帳號
+* 修正 ATM 轉帳取號成功時訂單狀態處理邏輯（支援 Status 為 CUSTOM 的情況）
+* 新增 ATM 轉帳繳費期限顯示功能
 
 = 1.0.9 =
 * 新增支付方式：Apple Pay、智慧ATM2.0、TWQR

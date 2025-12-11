@@ -107,8 +107,14 @@ class Newebpay_Response_Handler
     {
         $result = '';
 
-        // 統一處理所有非成功狀態
-        if (!empty($req_data['Status']) && $req_data['Status'] != 'SUCCESS') {
+        // 檢查非即時付款方式是否取號成功
+        $is_vacc_success = ($req_data['PaymentType'] == 'VACC' && !empty($req_data['BankCode']) && !empty($req_data['CodeNo']));
+        $is_cvs_success = ($req_data['PaymentType'] == 'CVS' && !empty($req_data['CodeNo']));
+        $is_barcode_success = ($req_data['PaymentType'] == 'BARCODE' && (!empty($req_data['Barcode_1']) || !empty($req_data['Barcode_2']) || !empty($req_data['Barcode_3'])));
+        $is_non_instant_success = $is_vacc_success || $is_cvs_success || $is_barcode_success;
+
+        // 統一處理所有非成功狀態（但排除非即時付款取號成功的情況）
+        if (!empty($req_data['Status']) && $req_data['Status'] != 'SUCCESS' && !$is_non_instant_success) {
             $this->handle_payment_failure($order, $req_data);
             return ''; // 空的結果，後面會添加重試區塊
         } elseif (empty($req_data['PaymentType']) || empty($req_data['Status'])) {
@@ -150,9 +156,12 @@ class Newebpay_Response_Handler
         $result .= $this->handle_cvscom_info($req_data, $order);
 
         // 處理付款狀態
-        if ($req_data['Status'] != 'SUCCESS') {
+        // ATM 轉帳、超商代碼、超商條碼等非即時付款方式，取號成功時 Status 可能是 CUSTOM
+        // 需要特別處理這些情況
+        if ($req_data['Status'] != 'SUCCESS' && !$is_non_instant_success) {
             $this->handle_payment_failure($order, $req_data);
         } else {
+            // 即時付款成功，或非即時付款取號成功，都將訂單設為處理中
             $this->handle_payment_success($order, $req_data);
         }
 
@@ -183,10 +192,15 @@ class Newebpay_Response_Handler
      */
     private function handle_virtual_account($req_data, $order)
     {
+        // ATM 轉帳取號成功時，Status 可能是 SUCCESS 或 CUSTOM
+        // 只要 BankCode 和 CodeNo 存在，就表示取號成功
         if (!empty($req_data['BankCode']) && !empty($req_data['CodeNo'])) {
             $result = '取號成功<br>';
             $result .= '銀行代碼：' . esc_attr($req_data['BankCode']) . '<br>';
-            $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
+            $result .= '繳費帳號：' . esc_attr($req_data['CodeNo']) . '<br>';
+            if (!empty($req_data['ExpireDate'])) {
+                $result .= '繳費期限：' . esc_attr($req_data['ExpireDate']) . '<br>';
+            }
             return $result;
         } else {
             $this->handle_payment_failure($order, $req_data);

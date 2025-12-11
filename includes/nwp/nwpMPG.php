@@ -457,10 +457,15 @@ class WC_newebpay extends baseNwpMPG
                 }
                 break;
             case 'VACC':
+                // ATM 轉帳取號成功時，Status 可能是 SUCCESS 或 CUSTOM
+                // 只要 BankCode 和 CodeNo 存在，就表示取號成功
                 if (!empty($req_data['BankCode']) && !empty($req_data['CodeNo'])) {
                     $result .= '取號成功<br>';
                     $result .= '銀行代碼：' . esc_attr($req_data['BankCode']) . '<br>';
-                    $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
+                    $result .= '繳費帳號：' . esc_attr($req_data['CodeNo']) . '<br>';
+                    if (!empty($req_data['ExpireDate'])) {
+                        $result .= '繳費期限：' . esc_attr($req_data['ExpireDate']) . '<br>';
+                    }
                 } else {
                     // 清除 transaction_id 以確保可以重試付款
                     $order->set_transaction_id('');
