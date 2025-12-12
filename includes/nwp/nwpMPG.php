@@ -89,9 +89,24 @@ class WC_newebpay extends baseNwpMPG
 
         $this->base_action_init();
         $this->encProcess = encProcess::get_instance();
+        $this->logger = class_exists('Newebpay_Logger') ? Newebpay_Logger::get_instance() : null;
 
         // add_filter( 'woocommerce_thankyou_page', array( $this, 'thankyou_page' ) ); // 商店付款完成頁面
-        add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text'));
+        add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text'), 10, 2);
+        // Woo Blocks 訂單完成頁會依權限決定是否顯示訂單資訊；已登入時不應再要求 email 驗證，避免出現「請登入檢視訂單」的提示
+        add_filter('woocommerce_order_email_verification_required', array($this, 'disable_order_email_verification_for_logged_in'), 10, 3);
+        // 有些站台即使使用傳統結帳，仍可能使用 Blocks 的訂單完成頁區塊（會額外顯示「好消息...登入此處...」）。
+        // 這裡針對藍新金流在「交易失敗」或「已登入」時移除該段提示，避免同頁出現矛盾訊息。
+        add_filter('render_block', array($this, 'filter_order_confirmation_status_block'), 10, 2);
+        // 支付平台常以跨站 POST 回到 ReturnURL，可能因 SameSite 導致登入/Session cookie 未附帶。
+        // 這裡用 PRG（Post/Redirect/Get）模式：先在 POST 時處理回傳並存結果，然後 redirect 到同 URL 的 GET，讓 cookie 能正常帶上。
+        add_action('template_redirect', array($this, 'maybe_prg_redirect_order_received'), 1);
+        // 在 thankyou 模板分支判斷前先處理藍新回傳（避免訂單曾被標記 failed 後，即使成功回傳也只會顯示失敗頁）
+        add_action('woocommerce_before_thankyou', array($this, 'maybe_process_newebpay_return_before_thankyou'), 0);
+        // 當訂單已標記為失敗/取消時，不顯示訂單明細/帳單地址等「已收到訂單」畫面內容
+        add_action('woocommerce_before_thankyou', array($this, 'maybe_hide_thankyou_order_details'), 1);
+        // 藍新回傳頁可能遇到跨站 POST / cookie 缺失，這裡在「帶 order key」時放寬檢視權限（僅限藍新訂單完成頁）。
+        add_filter('woocommerce_order_received_verify_known_shoppers', array($this, 'allow_view_order_with_key_for_newebpay'), 10, 1);
     }
 
     /**
@@ -274,19 +289,53 @@ class WC_newebpay extends baseNwpMPG
         return $itemdesc;
     }
 
-    public function order_received_text()
+    public function order_received_text($text, $order = null)
     {
         $req_data = array();
 
-        // prevent other maker's payment method to show this text
+        // WooCommerce 可能傳入 order_id 或 WC_Order
+        if (is_numeric($order)) {
+            $order = wc_get_order($order);
+        }
+
+        // Woo Blocks 在沒有權限時可能會傳入 null，這裡自行嘗試從 query 取得訂單
+        if (empty($order)) {
+            $order_id_from_query = absint(get_query_var('order-received'));
+            if ($order_id_from_query) {
+                $order = wc_get_order($order_id_from_query);
+            }
+        }
+
+        // 若拿不到訂單，維持 WooCommerce 預設文字
+        if (empty($order)) {
+            return $text;
+        }
+
+        // 只處理藍新金流此支付方式，避免影響其他金流/頁面
+        if (method_exists($order, 'get_payment_method') && $order->get_payment_method() !== $this->id) {
+            return $text;
+        }
+
+        // 若已在 POST 階段處理並存入訊息（PRG），則 GET 階段直接顯示該訊息，避免又落回 WooCommerce 預設成功文案
         if (!isset($_REQUEST['TradeSha'])) {
-            return;
+            $stored_message = $order->get_meta('_newebpay_return_message');
+            if (!empty($stored_message)) {
+                return $stored_message;
+            }
+        }
+
+        // 若不是藍新回傳流程（沒有 TradeSha），則依訂單狀態決定顯示內容
+        if (!isset($_REQUEST['TradeSha'])) {
+            // 訂單已失敗/取消：顯示失敗訊息（不要顯示「已收到訂單」）
+            if (in_array($order->get_status(), array('failed', 'cancelled'), true)) {
+                return '交易失敗，請重新填單' . $this->get_return_links_html();
+            }
+            return $text;
         }
 
         if (!empty(sanitize_text_field($_REQUEST['TradeSha']))) {
             if (!$this->chkShaIsVaildByReturnData($_REQUEST)) {
-                echo '請重新填單';
-                exit();
+                return '請重新填單' . $this->get_return_links_html();
             }
             $req_data = $this->encProcess->create_aes_decrypt(
                 sanitize_text_field($_REQUEST['TradeInfo']),
@@ -307,13 +356,13 @@ class WC_newebpay extends baseNwpMPG
         }
 
         if (empty($order)) {
-            return '交易失敗，請重新填單';
-            exit();
+            return '交易失敗，請重新填單' . $this->get_return_links_html();
         }
 
         if (empty($req_data['PaymentType']) || empty($req_data['Status'])) {
-            return '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
-            exit();
+            // 有錯誤碼但缺少 PaymentType 時，仍應將訂單標記為失敗，避免 thankyou 頁顯示「已收到訂單」與完整訂單明細
+            $this->maybe_mark_order_failed($order, $req_data['Status'], $req_data['Message']);
+            return '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message'])) . $this->get_return_links_html();
         }
 
         $result = '付款方式：' . esc_attr($this->get_payment_type_str($req_data['PaymentType'], !empty($req_data['P2GPaymentType']))) . '<br>';
@@ -325,7 +374,7 @@ class WC_newebpay extends baseNwpMPG
                 if ($req_data['Status'] == 'SUCCESS') {
                     $result .= '交易成功<br>';
                 } else {
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message'])) . $this->get_return_links_html();
                 }
                 break;
             case 'VACC':
@@ -339,7 +388,7 @@ class WC_newebpay extends baseNwpMPG
                         $result .= '繳費期限：' . esc_attr($req_data['ExpireDate']) . '<br>';
                     }
                 } else {
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message'])) . $this->get_return_links_html();
                 }
                 break;
             case 'CVS':
@@ -347,7 +396,7 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '取號成功<br>';
                     $result .= '繳費代碼：' . esc_attr($req_data['CodeNo']) . '<br>';
                 } else {
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message'])) . $this->get_return_links_html();
                 }
                 break;
             case 'BARCODE':
@@ -355,12 +404,12 @@ class WC_newebpay extends baseNwpMPG
                     $result .= '取號成功<br>';
                     $result .= '請前往信箱列印繳費單<br>';
                 } else {
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message'])) . $this->get_return_links_html();
                 }
                 break;
             case 'CVSCOM':
                 if (empty($req_data['CVSCOMName']) || empty($req_data['StoreName']) || empty($req_data['StoreAddr'])) {
-                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message']));
+                    $result .= '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message'])) . $this->get_return_links_html();
                 }
                 break;
             default:
@@ -418,6 +467,296 @@ class WC_newebpay extends baseNwpMPG
 
         return $result;
     }
+
+    /**
+     * thankyou.php 即使在 failed 分支，仍會執行 woocommerce_thankyou hook（預設會輸出訂單明細）。
+     * 這裡在藍新金流且訂單失敗/取消時移除該輸出，避免顯示完整訂單資料。
+     */
+    public function maybe_hide_thankyou_order_details($order_id)
+    {
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+        if (method_exists($order, 'get_payment_method') && $order->get_payment_method() !== $this->id) {
+            return;
+        }
+        if ($order->has_status(array('failed', 'cancelled'))) {
+            // 移除所有可能輸出訂單資訊的 hook（保留「再試一次」按鈕，但隱藏詳細明細）
+            remove_action('woocommerce_thankyou', 'woocommerce_order_details_table', 10);
+            remove_action('woocommerce_thankyou_' . $this->id, array($this, 'receipt_page'), 10);
+
+            // 隱藏訂單明細
+            echo '<style type="text/css">
+                .woocommerce-order .woocommerce-order-details,
+                .woocommerce-order .woocommerce-customer-details,
+                .woocommerce-order .woocommerce-table--order-details,
+                .woocommerce-order table.woocommerce-table--order-details {
+                    display: none !important;
+                }
+            </style>';
+        }
+    }
+
+
+    /**
+     * 在 thankyou.php 進行 failed/成功分支判斷前先處理藍新回傳，確保：
+     * - 若實際成功，能將訂單狀態從 failed 轉回 processing（避免仍顯示失敗頁）。
+     * - 若失敗，保底標記 failed 並存入錯誤訊息供 GET 顯示。
+     */
+    public function maybe_process_newebpay_return_before_thankyou($order_id)
+    {
+        if (!isset($_REQUEST['TradeSha'])) {
+            return;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+
+        if (method_exists($order, 'get_payment_method') && $order->get_payment_method() !== $this->id) {
+            return;
+        }
+
+        // 驗證 SHA/解密
+        if (!$this->chkShaIsVaildByReturnData($_REQUEST)) {
+            $this->maybe_mark_order_failed($order, 'SHA_INVALID', 'SHA validate fail');
+            $order->update_meta_data('_newebpay_return_message', $this->sanitize_return_message('請重新填單' . $this->get_return_links_html()));
+            $order->save();
+            return;
+        }
+
+        $req_data = $this->encProcess->create_aes_decrypt(
+            sanitize_text_field($_REQUEST['TradeInfo']),
+            $this->HashKey,
+            $this->HashIV
+        );
+
+        $init_indexes = 'Status,Message,TradeNo,MerchantOrderNo,PaymentType,P2GPaymentType,BankCode,CodeNo,Barcode_1,Barcode_2,Barcode_3,ExpireDate';
+        $req_data     = $this->init_array_data(is_array($req_data) ? $req_data : array(), $init_indexes);
+
+        // 設定交易序號
+        if (!empty($req_data['TradeNo'])) {
+            $order->set_transaction_id($req_data['TradeNo']);
+            $order->save();
+        }
+
+        // 判斷非即時取號成功（Status 可能是 CUSTOM）
+        $is_vacc_success = ($req_data['PaymentType'] === 'VACC' && !empty($req_data['BankCode']) && !empty($req_data['CodeNo']));
+        $is_cvs_success = ($req_data['PaymentType'] === 'CVS' && !empty($req_data['CodeNo']));
+        $is_barcode_success = ($req_data['PaymentType'] === 'BARCODE' && (!empty($req_data['Barcode_1']) || !empty($req_data['Barcode_2']) || !empty($req_data['Barcode_3'])));
+
+        $is_success = ($req_data['Status'] === 'SUCCESS') || $is_vacc_success || $is_cvs_success || $is_barcode_success;
+
+        if (!$is_success) {
+            $this->maybe_mark_order_failed($order, $req_data['Status'], $req_data['Message']);
+            $msg = '交易失敗，請重新填單<br>錯誤代碼：' . esc_attr($req_data['Status']) . '<br>錯誤訊息：' . esc_attr(urldecode($req_data['Message'])) . $this->get_return_links_html();
+            $order->update_meta_data('_newebpay_return_message', $this->sanitize_return_message($msg));
+            $order->save();
+            return;
+        }
+
+        // 成功：清除先前失敗訊息，並確保狀態為 processing（允許從 failed 轉回）
+        $order->delete_meta_data('_newebpay_return_message');
+        $order->save();
+        $order->update_status('processing');
+    }
+
+    /**
+     * 在回傳資料異常但已明確失敗時，保底將訂單狀態標記為 failed。
+     */
+    private function maybe_mark_order_failed($order, $code = '', $message = '')
+    {
+        if (!$order || !is_a($order, 'WC_Order')) {
+            return;
+        }
+        if ($order->is_paid()) {
+            return;
+        }
+        // 避免重複覆蓋
+        if ($order->has_status(array('failed', 'cancelled'))) {
+            return;
+        }
+
+        $code = is_scalar($code) ? (string)$code : '';
+        $message = is_scalar($message) ? (string)$message : '';
+        $note = 'Payment failed';
+        if ($code !== '' || $message !== '') {
+            $note = sprintf(
+                'Payment failed: %s (%s)',
+                $code,
+                $message
+            );
+        }
+        $order->update_status('failed', $note);
+    }
+
+    /**
+     * PRG：處理跨站 POST 回傳並 redirect 到 GET，讓登入/Session cookie 正常帶上（避免被判定為未登入）。
+     */
+    public function maybe_prg_redirect_order_received()
+    {
+        // 只處理 order received 場景
+        $order_id = absint(get_query_var('order-received'));
+        if (!$order_id) {
+            return;
+        }
+
+        // 只處理 POST 且帶有藍新回傳參數
+        // 有些支付平台會用跨站 POST 回傳，但內容型態可能導致 $_POST 不一定可用；因此以 $_REQUEST 作為判斷依據。
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !isset($_REQUEST['TradeSha'])) {
+            return;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+
+        // 只處理藍新金流
+        if (method_exists($order, 'get_payment_method') && $order->get_payment_method() !== $this->id) {
+            return;
+        }
+
+        // 先用既有邏輯產生訊息並同步更新訂單狀態
+        $message = $this->order_received_text('', $order);
+        $message = $this->sanitize_return_message($message);
+
+        if (!empty($message)) {
+            $order->update_meta_data('_newebpay_return_message', $message);
+            $order->save();
+        }
+
+        // redirect 到 GET（同一個 order received URL）
+        if (method_exists($order, 'get_checkout_order_received_url')) {
+            wp_safe_redirect($order->get_checkout_order_received_url());
+            exit;
+        }
+    }
+
+    /**
+     * 針對藍新金流 order-received 頁：若 URL 帶有有效 order key，允許顯示訂單資訊（避免跨站 POST 造成的 cookie 缺失讓已登入用戶被誤判為未登入）。
+     *
+     * 注意：此設定只放寬「是否需要登入才能看訂單」的檢查，仍依 Woo 的 order key 驗證作為保護。
+     */
+    public function allow_view_order_with_key_for_newebpay($verify_known_shoppers)
+    {
+        // 只在 order received 頁才處理
+        $order_id = absint(get_query_var('order-received'));
+        if (!$order_id) {
+            return $verify_known_shoppers;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return $verify_known_shoppers;
+        }
+
+        // 只處理藍新金流
+        if (method_exists($order, 'get_payment_method') && $order->get_payment_method() !== $this->id) {
+            return $verify_known_shoppers;
+        }
+
+        // 必須帶 key 且通過 Woo 的驗證
+        if (!empty($_GET['key']) && method_exists($order, 'key_is_valid') && $order->key_is_valid(wc_clean(wp_unslash($_GET['key'])))) {
+            return false;
+        }
+
+        return $verify_known_shoppers;
+    }
+
+    /**
+     * 儲存/輸出用：允許基本排版與按鈕連結（避免記錄或輸出多餘 HTML）。
+     */
+    private function sanitize_return_message($html)
+    {
+        if (empty($html)) {
+            return '';
+        }
+
+        $allowed = array(
+            'br' => array(),
+            'p' => array('class' => true),
+            'a' => array(
+                'href' => true,
+                'class' => true,
+            ),
+            'strong' => array(),
+            'em' => array(),
+        );
+
+        return wp_kses($html, $allowed);
+    }
+
+    /**
+     * 已登入使用者在訂單完成頁不需要 email 驗證（Woo Blocks），避免顯示「請登入檢視訂單」之類提示。
+     */
+    public function disable_order_email_verification_for_logged_in($required, $order, $context)
+    {
+        if ($context === 'order-received' && is_user_logged_in()) {
+            return false;
+        }
+        return $required;
+    }
+
+    /**
+     * 移除 WooCommerce Blocks 訂單完成頁的額外提示（如：好消息/登入此處），避免與交易失敗訊息同時出現。
+     *
+     * @param string $block_content 區塊輸出 HTML
+     * @param array  $block         區塊資料（含 blockName）
+     * @return string
+     */
+    public function filter_order_confirmation_status_block($block_content, $block)
+    {
+        if (empty($block['blockName']) || $block['blockName'] !== 'woocommerce/order-confirmation-status') {
+            return $block_content;
+        }
+
+        $order_id = absint(get_query_var('order-received'));
+        if (!$order_id) {
+            return $block_content;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return $block_content;
+        }
+
+        // 只處理藍新金流
+        if (method_exists($order, 'get_payment_method') && $order->get_payment_method() !== $this->id) {
+            return $block_content;
+        }
+
+        // 這段描述文案（好消息/登入此處）容易與本外掛的錯誤訊息衝突；
+        // 且本外掛目前主力是傳統結帳流程，因此只要是藍新金流就一律移除此段描述。
+        $status = method_exists($order, 'get_status') ? $order->get_status() : '';
+        $should_remove_notice = true;
+
+        // 移除 Status block append 的 description 區塊（內含「好消息...登入此處...」等提示）
+        $block_content = preg_replace('~<div class="wc-block-order-confirmation-status-description[^"]*">.*?</div>~s', '', $block_content);
+
+        return $block_content;
+    }
+
+    /**
+     * 交易失敗時提供返回連結（避免再包一層 <p>，以免 thankyou 模板內已經有 <p> 包裹）。
+     */
+    private function get_return_links_html()
+    {
+        $cart_url = function_exists('wc_get_cart_url') ? wc_get_cart_url() : home_url('/');
+        $shop_url = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/');
+        if (empty($shop_url)) {
+            $shop_url = home_url('/');
+        }
+
+        return '<br><a class="button" href="' . esc_url($cart_url) . '">返回購物車</a> '
+            . '<a class="button" href="' . esc_url($shop_url) . '">返回商店</a>';
+    }
+
+    /**
+     * 收斂並避免記錄敏感資訊：只記錄「cookie key 是否存在」等線索，不記錄值。
+     */
 
     /**
      * Output for the order received page.

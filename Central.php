@@ -42,6 +42,7 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 
 
 		private static $instance;
+		private $logger;
 
 		/**
 		 * Returns the *Singleton* instance of this class.
@@ -61,6 +62,10 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 
 		public function init() {
 			$this->init_gateways();
+			// 藍新回傳常為跨站 POST，可能因 SameSite 導致登入/Session cookie 未附帶。
+			// 這裡用 PRG（Post/Redirect/Get）在 template_redirect 階段先處理回傳並 redirect 到同 URL 的 GET，確保 cookie 能正常帶上。
+			add_action( 'template_redirect', array( $this, 'newebpay_prg_template_redirect' ), 1 );
+			$this->logger = class_exists( 'Newebpay_Logger' ) ? Newebpay_Logger::get_instance() : null;
 		}
 
 		private function init_gateways() {
@@ -92,6 +97,117 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			include_once NEWEB_MAIN_PATH . '/includes/nwp/nwpMPG.php';
 			include_once NEWEB_MAIN_PATH . '/includes/invoice/nwpElectronicInvoice.php';
 			include_once NEWEB_MAIN_PATH . '/includes/api/nwpOthersAPI.php';
+		}
+
+		/**
+		 * 在 template_redirect 階段處理藍新幕前回傳（TradeSha/TradeInfo）並 redirect 到 GET。
+		 * 目的：避免跨站 POST 時 cookie 沒帶，導致無法識別登入狀態/權限不一致。
+		 */
+		public function newebpay_prg_template_redirect() {
+			if ( ! function_exists( 'wc_get_order' ) ) {
+				return;
+			}
+
+			$order_id = absint( get_query_var( 'order-received' ) );
+			if ( ! $order_id ) {
+				return;
+			}
+
+			if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) !== 'POST' ) {
+				return;
+			}
+
+			// 有些回傳型態可能導致 $_POST 不完整，這裡用 $_REQUEST 判斷
+			if ( empty( $_REQUEST['TradeSha'] ) || empty( $_REQUEST['TradeInfo'] ) ) {
+				return;
+			}
+
+			$order = wc_get_order( $order_id );
+			if ( ! $order ) {
+				return;
+			}
+
+			// 只處理藍新金流
+			if ( method_exists( $order, 'get_payment_method' ) && $order->get_payment_method() !== 'newebpay' ) {
+				return;
+			}
+
+			$settings = get_option( 'woocommerce_newebpay_settings', array() );
+			$hash_key = isset( $settings['HashKey'] ) ? trim( (string) $settings['HashKey'] ) : '';
+			$hash_iv  = isset( $settings['HashIV'] ) ? trim( (string) $settings['HashIV'] ) : '';
+
+			if ( empty( $hash_key ) || empty( $hash_iv ) || ! class_exists( 'encProcess' ) ) {
+				return;
+			}
+
+			$enc = encProcess::get_instance();
+			$trade_info = sanitize_text_field( wp_unslash( $_REQUEST['TradeInfo'] ) );
+			$trade_sha  = sanitize_text_field( wp_unslash( $_REQUEST['TradeSha'] ) );
+
+			$local_sha = $enc->aes_sha256_str( $trade_info, $hash_key, $hash_iv );
+			$sha_ok    = hash_equals( (string) $local_sha, (string) $trade_sha );
+
+			if ( ! $sha_ok ) {
+				if ( $this->logger ) {
+					$this->logger->warning( 'PRG: TradeSha validation failed', array( 'order_id' => $order_id ) );
+				}
+				$order->update_status( 'failed', 'Payment failed: SHA_INVALID (SHA validate fail)' );
+				$order->update_meta_data( '_newebpay_return_message', wp_kses(
+					'請重新填單<br><br><a class="button" href="' . esc_url( wc_get_cart_url() ) . '">返回購物車</a> <a class="button" href="' . esc_url( wc_get_page_permalink( 'shop' ) ?: home_url( '/' ) ) . '">返回商店</a>',
+					array(
+						'br' => array(),
+						'a'  => array( 'href' => true, 'class' => true ),
+					)
+				) );
+				$order->save();
+				wp_safe_redirect( $order->get_checkout_order_received_url() );
+				exit;
+			}
+
+			$req = $enc->create_aes_decrypt( $trade_info, $hash_key, $hash_iv );
+			$req = is_array( $req ) ? $req : array();
+
+			$status      = $req['Status'] ?? null;
+			$message     = $req['Message'] ?? null;
+			$paymenttype = $req['PaymentType'] ?? null;
+			$tradeno     = $req['TradeNo'] ?? null;
+
+			// 非即時取號成功（Status 可能是 CUSTOM）
+			$is_vacc_success    = ( $paymenttype === 'VACC' && ! empty( $req['BankCode'] ) && ! empty( $req['CodeNo'] ) );
+			$is_cvs_success     = ( $paymenttype === 'CVS' && ! empty( $req['CodeNo'] ) );
+			$is_barcode_success = ( $paymenttype === 'BARCODE' && ( ! empty( $req['Barcode_1'] ) || ! empty( $req['Barcode_2'] ) || ! empty( $req['Barcode_3'] ) ) );
+
+			$is_success = ( $status === 'SUCCESS' ) || $is_vacc_success || $is_cvs_success || $is_barcode_success;
+
+			if ( $tradeno ) {
+				$order->set_transaction_id( (string) $tradeno );
+			}
+
+			if ( ! $is_success ) {
+				$note = sprintf( 'Payment failed: %s (%s)', (string) $status, (string) $message );
+				$order->update_status( 'failed', $note );
+
+				$error_html = '交易失敗，請重新填單<br>錯誤代碼：' . esc_html( (string) $status ) . '<br>錯誤訊息：' . esc_html( urldecode( (string) $message ) )
+					. '<br><br><a class="button" href="' . esc_url( wc_get_cart_url() ) . '">返回購物車</a> <a class="button" href="' . esc_url( wc_get_page_permalink( 'shop' ) ?: home_url( '/' ) ) . '">返回商店</a>';
+				$order->update_meta_data( '_newebpay_return_message', wp_kses(
+					$error_html,
+					array(
+						'br' => array(),
+						'a'  => array( 'href' => true, 'class' => true ),
+					)
+				) );
+				$order->save();
+				wp_safe_redirect( $order->get_checkout_order_received_url() );
+				exit;
+			}
+
+			// 成功：清除先前失敗訊息、轉為 processing（允許從 failed 轉回）
+			$order->delete_meta_data( '_newebpay_return_message' );
+			$order->save();
+			$order->update_status( 'processing' );
+
+			wp_safe_redirect( $order->get_checkout_order_received_url() );
+			exit;
 		}
 	}
 
