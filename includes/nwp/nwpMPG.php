@@ -230,24 +230,10 @@ class WC_newebpay extends baseNwpMPG
             }
         }
 
-        $get_select_payment = $this->get_selected_payment();
-
-        $cvscom_payed = $get_select_payment['CVSCOMPayed'] ?? '';
-        
-        $cvscom_not_payed = $get_select_payment['CVSCOMNotPayed'] ?? '';
-        
-        $custom_cvscom_not_payed = $order->get_meta('_CVSCOMNotPayed') ?? '';
-
-        // 超商取貨的備用邏輯（如果上面的 selected_payment 沒有處理到）
-        if (empty($post_data['CVSCOM'])) {
-            if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
-                // 使用者選擇了超商取貨不付款
-                $post_data['CVSCOM'] = '1';
-            } elseif ($cvscom_payed == '1') {
-                // 使用者選擇了超商取貨付款
-                $post_data['CVSCOM'] = '2';
-            }
-        } 
+        // 只有在明確選擇了 CVSCOM 相關支付方式時才設定 CVSCOM 參數
+        // 避免未選擇時也送出參數導致支付方式多出超商取貨選項
+        // CVSCOM 參數應該已經在上面根據 selected_payment 設定完成
+        // 如果 selected_payment 不是 CVSCOMPayed 或 CVSCOMNotPayed，就不應該設定 CVSCOM 參數 
 
         $aes    = $this->encProcess->create_mpg_aes_encrypt($post_data, $this->HashKey, $this->HashIV);
         $sha256 = $this->encProcess->aes_sha256_str($aes, $this->HashKey, $this->HashIV);
@@ -1059,9 +1045,12 @@ class WC_newebpay extends baseNwpMPG
      */
     public function validate_fields()
     {
-        $cvscom_not_payed = sanitize_text_field($_POST['cvscom_not_payed']);
+        // 處理超商取貨不付款 checkbox：只有勾選時才設定為 1，未勾選時設定為 0
+        $cvscom_not_payed = isset($_POST['cvscom_not_payed']) ? sanitize_text_field($_POST['cvscom_not_payed']) : '';
         if ($cvscom_not_payed == 'CVSCOMNotPayed') {
             $this->nwpCVSCOMNotPayed = 1;
+        } else {
+            $this->nwpCVSCOMNotPayed = 0;
         }
         $choose_payment = sanitize_text_field($_POST['nwp_selected_payments']);
         if ($_POST['payment_method'] == $this->id) {
