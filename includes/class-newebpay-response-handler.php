@@ -81,13 +81,31 @@ class Newebpay_Response_Handler
             exit();
         }
 
+        // 確認回傳的交易狀態，避免成功的交易還是顯示成失敗的訂單
+        // 如果訂單已經有 transaction_id 且狀態是 processing 或 completed，表示已經成功付款
+        // 此時應該直接返回成功訊息，避免重複處理或錯誤標記為失敗
+        $existing_transaction_id = $order->get_transaction_id();
+        $order_status = $order->get_status();
+        if (!empty($existing_transaction_id) && 
+            in_array($order_status, array('processing', 'completed')) &&
+            !empty($req_data['TradeNo']) && 
+            $existing_transaction_id === $req_data['TradeNo']) {
+            // 訂單已經成功付款，直接返回成功訊息
+            $result = '付款方式：' . esc_attr($this->get_payment_type_str($req_data['PaymentType'], !empty($req_data['P2GPaymentType']))) . '<br>';
+            $result .= '交易成功<br>';
+            return $result;
+        }
+
         // 處理付款結果
         $result = $this->process_payment_result($req_data, $order);
+        
+        // 重新載入訂單以獲取最新狀態（在 process_payment_result 中可能已更新狀態）
+        $order = wc_get_order($order->get_id());
         
         // 處理自動登入
         $this->handle_auto_login($order, $req_data);
         
-        // 處理重試付款按鈕
+        // 處理重試付款按鈕（使用更新後的訂單狀態）
         $result .= $this->handle_retry_payment_button($order, $req_data);
         
         // 處理已付款訂單的按鈕隱藏
@@ -114,6 +132,7 @@ class Newebpay_Response_Handler
         $is_non_instant_success = $is_vacc_success || $is_cvs_success || $is_barcode_success;
 
         // 統一處理所有非成功狀態（但排除非即時付款取號成功的情況）
+        // 確認回傳的交易狀態，避免成功的交易還是顯示成失敗的訂單
         if (!empty($req_data['Status']) && $req_data['Status'] != 'SUCCESS' && !$is_non_instant_success) {
             $this->handle_payment_failure($order, $req_data);
             return ''; // 空的結果，後面會添加重試區塊
@@ -158,11 +177,17 @@ class Newebpay_Response_Handler
         // 處理付款狀態
         // ATM 轉帳、超商代碼、超商條碼等非即時付款方式，取號成功時 Status 可能是 CUSTOM
         // 需要特別處理這些情況
+        // 確認回傳的交易狀態，避免成功的交易還是顯示成失敗的訂單
         if ($req_data['Status'] != 'SUCCESS' && !$is_non_instant_success) {
             $this->handle_payment_failure($order, $req_data);
         } else {
             // 即時付款成功，或非即時付款取號成功，都將訂單設為處理中
+            // 優先處理付款成功，立即更新訂單狀態，避免顯示為失敗的訂單
+            // 這對於重新付款成功的訂單特別重要（例如第一次分期付款失敗後再次付款成功）
             $this->handle_payment_success($order, $req_data);
+            
+            // 重新載入訂單以獲取最新狀態，確保後續處理使用最新的訂單狀態
+            $order = wc_get_order($order->get_id());
         }
 
         return $result;
@@ -324,14 +349,51 @@ class Newebpay_Response_Handler
     private function handle_payment_success($order, $req_data)
     {
         $previous_status = $order->get_status();
+        $existing_transaction_id = $order->get_transaction_id();
+
+        // 確認回傳的交易狀態，避免成功的交易還是顯示成失敗的訂單
+        // 如果訂單已經有相同的 transaction_id 且狀態是 processing 或 completed，表示已經成功付款
+        // 此時不應該重複更新狀態，避免覆蓋已成功的訂單
+        if (!empty($existing_transaction_id) && 
+            $existing_transaction_id === $req_data['TradeNo'] &&
+            in_array($previous_status, array('processing', 'completed'))) {
+            // 訂單已經成功付款，不需要重複處理
+            return;
+        }
 
         // 設定交易編號
         $order->set_transaction_id($req_data['TradeNo']);
-        $order->update_status('processing');
-
-        // 如果訂單之前是失敗狀態，添加備註
+        
+        // 如果訂單之前是失敗狀態，先更新狀態為 processing，避免顯示為失敗的訂單
+        // 這對於重新付款成功的訂單特別重要
         if ($previous_status === 'failed') {
-            $order->add_order_note(__('Payment succeeded after previous failure - order recovered', 'newebpay-payment'));
+            // 立即更新狀態，確保訂單不會再顯示為失敗
+            // 使用 update_status 會自動保存，但為了確保 post_status 也更新，我們明確保存訂單
+            $order->update_status('processing', __('Payment succeeded after previous failure - order recovered', 'newebpay-payment'));
+            
+            // 明確保存訂單，確保 post_status 從 wc-failed 更新為 wc-processing
+            // 這對於修復訂單標題顯示問題非常重要
+            $order->save();
+            
+            // 強制更新 post_status，確保 WooCommerce 訂單標題正確顯示
+            // 直接更新 post_status 以確保標題不會顯示為「失敗的訂單」
+            $post_id = $order->get_id();
+            if ($post_id) {
+                wp_update_post(array(
+                    'ID' => $post_id,
+                    'post_status' => 'wc-processing'
+                ));
+                // 清除訂單緩存，確保後續讀取使用最新狀態
+                clean_post_cache($post_id);
+                // 清除 WooCommerce 訂單 transient 緩存
+                if (function_exists('wc_delete_shop_order_transients')) {
+                    wc_delete_shop_order_transients($order);
+                }
+            }
+        } else {
+            $order->update_status('processing');
+            // 明確保存訂單，確保狀態變更被正確保存
+            $order->save();
         }
 
         // 付款成功時立即清空購物車

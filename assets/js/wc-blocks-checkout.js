@@ -38,6 +38,9 @@ const Content = ( props ) => {
     const [error, setError] = useState(null);
     const [showCVSCOMNotPayed, setShowCVSCOMNotPayed] = useState(true);
     const [cvscomNotPayed, setCvscomNotPayed] = useState(false);
+    const [instPeriods, setInstPeriods] = useState([]);
+    const [selectedInstPeriod, setSelectedInstPeriod] = useState('');
+    const [showInstPeriod, setShowInstPeriod] = useState(false);
 
     // 處理支付資料提交到 WooCommerce Blocks
     useEffect( () => {
@@ -48,8 +51,23 @@ const Content = ( props ) => {
             const paymentMethodData = {
                 selectedMethod: backendSelected,
                 newebpay_selected_method: backendSelected,
-                cvscom_not_payed: cvscomNotPayed
+                cvscom_not_payed: cvscomNotPayed,
+                nwp_inst_period: selectedInstPeriod
             };
+            
+            // 驗證：如果選擇了信用卡分期且商店設定了期數，必須選擇期數
+            // 如果商店沒有設定期數，則不需要選擇（會使用預設值 InstFlag = 1）
+            const currentMethod = paymentMethods.find(m => m.ui_id === selectedMethod || m.id === selectedMethod);
+            const isInstMethod = currentMethod && (currentMethod.id === 'Inst' || currentMethod.frontend_id === 'installment');
+            
+            if (isInstMethod && instPeriods.length > 0 && !selectedInstPeriod) {
+                return {
+                    type: emitResponse.responseTypes.ERROR,
+                    message: __('請選擇分期期數', 'newebpay-payment')
+                };
+            }
+            
+            // 如果商店沒有設定期數，不需要驗證，允許提交（後端會使用 InstFlag = 1）
             
             // 回傳成功狀態和資料給 WooCommerce Blocks
             if ( selectedMethod ) {
@@ -71,7 +89,7 @@ const Content = ( props ) => {
         return () => {
             unsubscribe();
         };
-    }, [ onPaymentSetup, emitResponse, selectedMethod, cvscomNotPayed ] );
+    }, [ onPaymentSetup, emitResponse, selectedMethod, cvscomNotPayed, selectedInstPeriod ] );
 
     // 使用 window 物件來存儲資料，讓後端能夠存取 (保留作為備用)
     useEffect(() => {
@@ -83,7 +101,8 @@ const Content = ( props ) => {
         // 更新全域資料
         window.newebpayData = {
             selectedMethod: selectedMethod,
-            cvscomNotPayed: cvscomNotPayed
+            cvscomNotPayed: cvscomNotPayed,
+            nwp_inst_period: selectedInstPeriod
         };
         
         // 觸發自定義事件，通知表單資料已更新
@@ -92,7 +111,7 @@ const Content = ( props ) => {
         });
         window.dispatchEvent(dataEvent);
         
-    }, [selectedMethod, cvscomNotPayed]);
+    }, [selectedMethod, cvscomNotPayed, selectedInstPeriod]);
 
     // 載入付款方式
     useEffect(() => {
@@ -121,12 +140,34 @@ const Content = ( props ) => {
                     setPaymentMethods(uiMethods);
                     // 預設選擇第一個付款方式（使用 ui_id）
                     if (uiMethods.length > 0) {
-                        setSelectedMethod(uiMethods[0].ui_id);
+                        const firstMethod = uiMethods[0];
+                        setSelectedMethod(firstMethod.ui_id);
+                        
+                        // 如果第一個付款方式是信用卡分期，且商店設定了期數，則顯示期數選擇
+                        if ((firstMethod.id === 'Inst' || firstMethod.frontend_id === 'installment') && 
+                            data.inst_periods && Array.isArray(data.inst_periods) && data.inst_periods.length > 0) {
+                            setShowInstPeriod(true);
+                            // 預設選擇第一個期數
+                            setSelectedInstPeriod(data.inst_periods[0].toString());
+                        } else {
+                            setShowInstPeriod(false);
+                        }
                     }
                     
                     // 檢查是否需要顯示超商取貨不付款選項
                     // 總是顯示超商取貨不付款選項，讓用戶可以選擇
                     setShowCVSCOMNotPayed(true);
+                    
+                    // 設定信用卡分期期數
+                    // 只有在商店設定了期數時才設定，否則留空（後端會使用 InstFlag = 1）
+                    if (data.inst_periods && Array.isArray(data.inst_periods) && data.inst_periods.length > 0) {
+                        setInstPeriods(data.inst_periods);
+                        // 預設選擇第一個期數（只有在顯示期數選擇器時才需要）
+                        // 這裡先設定，如果第一個付款方式不是分期，會在 handleMethodChange 中清除
+                    } else {
+                        setInstPeriods([]);
+                        setSelectedInstPeriod('');
+                    }
                 } else {
                     console.error('Newebpay: API returned unsuccessful response:', data);
                     setError('無法載入付款方式');
@@ -165,13 +206,48 @@ const Content = ( props ) => {
             setShowCVSCOMNotPayed(true); // 顯示超商取貨不付款選項
         }
         
+        // 檢查是否選擇了信用卡分期付款
+        // 只有在商店設定了期數時才顯示期數選擇器
+        const currentMethod = paymentMethods.find(m => m.ui_id === newMethod || m.id === newMethod);
+        const isInstMethod = currentMethod && (currentMethod.id === 'Inst' || currentMethod.frontend_id === 'installment' || backendId === 'inst' || backendId === 'installment');
+        
+        if (isInstMethod && instPeriods.length > 0) {
+            // 商店設定了期數，顯示分期期數選擇
+            setShowInstPeriod(true);
+            // 如果還沒有選擇期數，預設選擇第一個
+            if (!selectedInstPeriod) {
+                setSelectedInstPeriod(instPeriods[0].toString());
+            }
+        } else {
+            // 隱藏分期期數選擇（商店沒有設定期數，或選擇了其他付款方式）
+            setShowInstPeriod(false);
+            setSelectedInstPeriod('');
+        }
+        
         // useEffect 會自動處理隱藏欄位更新
         
         // 觸發自定義事件，讓其他組件知道選擇已改變
         const customEvent = new CustomEvent('newebpay-method-selected', {
             detail: { 
                 method: newMethod,
-                cvscomNotPayed: finalCvscomNotPayed
+                cvscomNotPayed: finalCvscomNotPayed,
+                instPeriod: selectedInstPeriod
+            }
+        });
+        window.dispatchEvent(customEvent);
+    };
+    
+    // 處理分期期數選擇
+    const handleInstPeriodChange = (event) => {
+        const newPeriod = event.target.value;
+        setSelectedInstPeriod(newPeriod);
+        
+        // 觸發自定義事件
+        const customEvent = new CustomEvent('newebpay-method-selected', {
+            detail: { 
+                method: selectedMethod,
+                cvscomNotPayed: cvscomNotPayed,
+                instPeriod: newPeriod
             }
         });
         window.dispatchEvent(customEvent);
@@ -267,6 +343,32 @@ const Content = ( props ) => {
                     disabled: isDisabled,
                     style: isDisabled ? { color: '#ccc' } : {}
                 }, method.name + (isDisabled ? ' (與超商取貨不付款互斥)' : ''))
+            }))
+        ]),
+
+        // 信用卡分期期數選擇（只有在商店設定了期數時才顯示）
+        showInstPeriod && instPeriods.length > 0 && createElement('div', {
+            key: 'inst-period-selector',
+            className: 'newebpay-inst-period-selector'
+        }, [
+            createElement('label', {
+                key: 'label',
+                htmlFor: 'nwp_inst_period',
+                className: 'newebpay-inst-period-label'
+            }, __('分期期數', 'newebpay-payment') + '：'),
+            createElement('select', {
+                key: 'select',
+                id: 'nwp_inst_period',
+                name: 'nwp_inst_period',
+                value: selectedInstPeriod,
+                onChange: handleInstPeriodChange,
+                className: 'newebpay-inst-period-select',
+                required: true
+            }, instPeriods.map(period => {
+                return createElement('option', {
+                    key: period,
+                    value: period.toString()
+                }, period + __('期', 'newebpay-payment'))
             }))
         ]),
 
@@ -447,6 +549,37 @@ if ( typeof window !== 'undefined' && window.document ) {
             color: #b8860b;
         }
         
+        /* 信用卡分期期數選擇器樣式 */
+        .newebpay-inst-period-selector {
+            margin: 12px 0;
+            padding: 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .newebpay-inst-period-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .newebpay-inst-period-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            background: #fff;
+        }
+        
+        .newebpay-inst-period-select:focus {
+            outline: none;
+            border-color: #007cba;
+            box-shadow: 0 0 0 1px #007cba;
+        }
+        
         /* 付款方式詳細信息 */
         .newebpay-method-details {
             margin: 12px 0;
@@ -569,6 +702,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof Storage !== 'undefined') {
             sessionStorage.setItem('newebpay_selected_method', event.detail.method || '');
             sessionStorage.setItem('newebpay_cvscom_not_payed', event.detail.cvscomNotPayed ? 'true' : 'false');
+            sessionStorage.setItem('newebpay_inst_period', event.detail.instPeriod || '');
         }
     });
     

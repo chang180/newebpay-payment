@@ -248,11 +248,31 @@ class Newebpay_WooCommerce_Blocks_Integration {
             $cvscom_not_payed = true;
         }
 
+        // 讀取信用卡分期期數設定
+        $inst_periods = array();
+        if ( is_array( $nwp_settings ) && isset( $nwp_settings['NwpPaymentMethodInstPeriods'] ) && ! empty( $nwp_settings['NwpPaymentMethodInstPeriods'] ) ) {
+            $inst_periods_str = trim( $nwp_settings['NwpPaymentMethodInstPeriods'] );
+            if ( ! empty( $inst_periods_str ) ) {
+                $periods = explode( ',', $inst_periods_str );
+                $valid_periods = array( 3, 6, 12, 18, 24, 30 );
+                foreach ( $periods as $period ) {
+                    $period = trim( $period );
+                    $period_int = (int) $period;
+                    if ( in_array( $period_int, $valid_periods ) ) {
+                        $inst_periods[] = $period_int;
+                    }
+                }
+                $inst_periods = array_unique( $inst_periods );
+                sort( $inst_periods );
+            }
+        }
+
         return new WP_REST_Response( array(
             'success' => true,
             'data' => $methods,
             'count' => count( $methods ),
             'cvscom_not_payed' => $cvscom_not_payed,
+            'inst_periods' => $inst_periods,
             'source' => 'rest_api',
             'version' => '1.1.0'
         ), 200 );
@@ -459,6 +479,11 @@ class Newebpay_WooCommerce_Blocks_Integration {
             $_POST['cvscom_not_payed'] = 'CVSCOMNotPayed';
         } else {
             $_POST['cvscom_not_payed'] = '';
+        }
+        
+        // 處理信用卡分期期數
+        if ( isset( $payment_method_data['nwp_inst_period'] ) && ! empty( $payment_method_data['nwp_inst_period'] ) ) {
+            $_POST['nwp_inst_period'] = sanitize_text_field( $payment_method_data['nwp_inst_period'] );
         }
         
         // 如果沒有明確的付款方式選擇，設置預設值
