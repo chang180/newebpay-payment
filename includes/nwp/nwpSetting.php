@@ -89,6 +89,13 @@ return apply_filters(
 			'label'   => __( '信用卡分期付款', 'newebpay-payment' ),
 			'default' => 'no',
 		),
+		'NwpPaymentMethodInstPeriods' => array(
+			'title'       => __( '信用卡分期付款期數', 'newebpay-payment' ),
+			'type'        => 'text',
+			'description' => __( '可輸入的期數選項：3, 6, 12, 18, 24, 30。格式：用逗號分隔，例如：3,6,12。留空則表示啟用所有期數（InstFlag = 1）。符合藍新金流 API 格式要求。', 'newebpay-payment' ),
+			'default'     => '',
+			'desc_tip'    => true,
+		),
 		'NwpPaymentMethodCreditRed'  => array(
 			'title'   => __( '信用卡紅利', 'newebpay-payment' ),
 			'type'    => 'checkbox',

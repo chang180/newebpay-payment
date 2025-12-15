@@ -100,6 +100,18 @@ class WC_newebpay extends baseNwpMPG
     public $nwpSelectedPayment;
 
     /**
+     * Inst Flag for installment payment
+     * @var int
+     */
+    public $nwpInstFlag;
+
+    /**
+     * Inst Periods (available installment periods)
+     * @var array
+     */
+    public $InstPeriods;
+
+    /**
      * Invoice Hash Key
      * @var string
      */
@@ -228,6 +240,27 @@ class WC_newebpay extends baseNwpMPG
         $this->SmartPaySourceType = trim($this->get_option('SmartPaySourceType'));
         $this->SmartPaySourceBankId = trim($this->get_option('SmartPaySourceBankId'));
         $this->SmartPaySourceAccountNo = trim($this->get_option('SmartPaySourceAccountNo'));
+
+        // 信用卡分期付款期數設定
+        $inst_periods_str = trim($this->get_option('NwpPaymentMethodInstPeriods'));
+        $this->InstPeriods = array();
+        if (!empty($inst_periods_str)) {
+            // 解析期數字串（用逗號分隔）
+            $periods = explode(',', $inst_periods_str);
+            // 有效期數：3, 6, 12, 18, 24, 30
+            $valid_periods = array(3, 6, 12, 18, 24, 30);
+            foreach ($periods as $period) {
+                $period = trim($period);
+                $period_int = (int)$period;
+                // 驗證期數是否為有效值
+                if (in_array($period_int, $valid_periods)) {
+                    $this->InstPeriods[] = $period_int;
+                }
+            }
+            // 移除重複值並排序
+            $this->InstPeriods = array_unique($this->InstPeriods);
+            sort($this->InstPeriods);
+        }
 
         // Test Mode
         if ($this->TestMode == 'yes') {

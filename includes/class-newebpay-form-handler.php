@@ -94,6 +94,40 @@ class Newebpay_Form_Handler
         }
         $szHtml .= '</select>';
         
+        // 信用卡分期期數選擇（如果商店設定了期數）
+        $inst_enabled = isset($payment_method['Inst']) && $payment_method['Inst'] == 1;
+        if ($inst_enabled && !empty($this->gateway->InstPeriods)) {
+            $szHtml .= '<br><div id="nwp_inst_period_wrapper" style="display:none;">';
+            $szHtml .= '<label for="nwp_inst_period">' . __('分期期數', 'newebpay-payment') . '：<span class="required">*</span></label>';
+            $szHtml .= '<select name="nwp_inst_period" id="nwp_inst_period" required>';
+            $first_period = true;
+            foreach ($this->gateway->InstPeriods as $period) {
+                $selected = $first_period ? ' selected' : '';
+                $szHtml .= '<option value="' . esc_attr($period) . '"' . $selected . '>' . esc_html($period) . __('期', 'newebpay-payment') . '</option>';
+                $first_period = false;
+            }
+            $szHtml .= '</select>';
+            $szHtml .= '</div>';
+            // 添加 JavaScript 來控制顯示/隱藏
+            $szHtml .= '<script type="text/javascript">
+                (function() {
+                    var paymentSelect = document.querySelector("select[name=\'nwp_selected_payments\']");
+                    var periodWrapper = document.getElementById("nwp_inst_period_wrapper");
+                    if (paymentSelect && periodWrapper) {
+                        function togglePeriodSelect() {
+                            if (paymentSelect.value === "Inst") {
+                                periodWrapper.style.display = "block";
+                            } else {
+                                periodWrapper.style.display = "none";
+                            }
+                        }
+                        paymentSelect.addEventListener("change", togglePeriodSelect);
+                        togglePeriodSelect(); // 初始化檢查
+                    }
+                })();
+            </script>';
+        }
+        
         if ($cvscom_not_payed == 1) {
             $szHtml .= '<br><input type="checkbox" name="cvscom_not_payed" id="CVSCOMNotPayed" value="CVSCOMNotPayed">';
             $szHtml .= '<label for="CVSCOMNotPayed">' . __('超商取貨不付款', 'newebpay-payment') . '</label>';
@@ -177,8 +211,8 @@ class Newebpay_Form_Handler
      */
     public function validate_fields()
     {
-        // 支援傳統表單和 WooCommerce Blocks 的參數名稱
-        $cvscom_not_payed = sanitize_text_field($_POST['cvscom_not_payed'] ?? '');
+        // 處理超商取貨不付款 checkbox：只有勾選時才設定為 1，未勾選時設定為 0
+        $cvscom_not_payed = isset($_POST['cvscom_not_payed']) ? sanitize_text_field($_POST['cvscom_not_payed']) : '';
         
         // 檢查 WooCommerce Blocks 傳來的 cvscom 資料
         if (empty($cvscom_not_payed) && isset($_POST['cvscom_not_payed_blocks'])) {
@@ -235,6 +269,49 @@ class Newebpay_Form_Handler
         
         if ($is_newebpay_payment) {
             $this->gateway->nwpSelectedPayment = $choose_payment;
+            
+            // 驗證信用卡分期期數（如果選擇了分期付款）
+            if ($choose_payment === 'Inst') {
+                $inst_period = isset($_POST['nwp_inst_period']) ? sanitize_text_field($_POST['nwp_inst_period']) : '';
+                
+                // 如果商店設定了期數，使用者必須選擇一個期數
+                if (!empty($this->gateway->InstPeriods)) {
+                    if (empty($inst_period)) {
+                        wc_add_notice(__('請選擇分期期數', 'newebpay-payment'), 'error');
+                        return false;
+                    }
+                    // 驗證期數是否為有效值（3, 6, 12, 18, 24, 30）
+                    $valid_periods = array(3, 6, 12, 18, 24, 30);
+                    $period_int = (int)$inst_period;
+                    if (!in_array($period_int, $valid_periods)) {
+                        wc_add_notice(__('請選擇有效的分期期數', 'newebpay-payment'), 'error');
+                        return false;
+                    }
+                    // 檢查是否在允許的期數範圍內
+                    if (!in_array($period_int, $this->gateway->InstPeriods)) {
+                        wc_add_notice(__('選擇的分期期數不在允許的範圍內', 'newebpay-payment'), 'error');
+                        return false;
+                    }
+                    // 儲存選擇的期數到屬性中，供 process_payment() 使用
+                    $this->gateway->nwpInstFlag = $period_int;
+                } else {
+                    // 商店沒有設定期數，使用者可以選擇或不選（不選則使用預設值全開）
+                    if (!empty($inst_period)) {
+                        // 驗證期數是否為有效值（3, 6, 12, 18, 24, 30）
+                        $valid_periods = array(3, 6, 12, 18, 24, 30);
+                        $period_int = (int)$inst_period;
+                        if (!in_array($period_int, $valid_periods)) {
+                            wc_add_notice(__('請選擇有效的分期期數', 'newebpay-payment'), 'error');
+                            return false;
+                        }
+                        $this->gateway->nwpInstFlag = $period_int;
+                    } else {
+                        // 沒有選擇期數，使用預設值（全開）
+                        $this->gateway->nwpInstFlag = '';
+                    }
+                }
+            }
+            
             return true;
         } else {
             return false;

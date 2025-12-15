@@ -76,8 +76,10 @@ class Newebpay_Payment_Handler
         $selected_payment = $this->get_selected_payment_method($order);
         $this->apply_payment_method($post_data, $selected_payment, $order);
         
-        // 處理超商取貨設定
-        $this->apply_cvscom_settings($post_data, $order);
+        // 只有在明確選擇了 CVSCOM 相關支付方式時才設定 CVSCOM 參數
+        // 避免未選擇時也送出參數導致支付方式多出超商取貨選項
+        // CVSCOM 參數應該已經在上面根據 selected_payment 設定完成
+        // 如果 selected_payment 不是 CVSCOMPayed 或 CVSCOMNotPayed，就不應該設定 CVSCOM 參數
 
         // 加密處理
         $aes = $this->gateway->encProcess->create_mpg_aes_encrypt($post_data, $this->gateway->HashKey, $this->gateway->HashIV);
@@ -187,15 +189,20 @@ class Newebpay_Payment_Handler
         } elseif ($selected_payment_lower === 'inst') {
             // 信用卡分期付款特殊處理
             // 信用卡分期是一種獨立的付款方式，只需要設置 InstFlag 參數
+            // 藍新金流 API 格式：
+            // - InstFlag = 1：顯示所有可用的分期選項
+            // - InstFlag = 3, 6, 12, 18, 24, 30：指定特定期數
+            
             // 嘗試從訂單 meta 取得用戶選擇的分期期數
             $inst_flag = $order->get_meta('_nwpInstFlag');
             
-            // InstFlag 可以是 3, 6, 12, 18, 24, 30 等期數
-            // 如果指定了有效期數，則使用該期數
+            // 有效期數：3, 6, 12, 18, 24, 30
+            // 如果用戶指定了有效期數，則使用該期數
             if (!empty($inst_flag) && in_array((int)$inst_flag, [3, 6, 12, 18, 24, 30])) {
                 $post_data['InstFlag'] = (int)$inst_flag;
             } else {
-                // 如果沒有指定期數，設置 InstFlag = 1，讓藍新顯示所有可用的分期選項
+                // 如果用戶沒有選擇期數，設置 InstFlag = 1，讓藍新顯示所有可用的分期選項
+                // 即使後台設定了期數限制，用戶未選擇時仍使用全開模式
                 $post_data['InstFlag'] = 1;
             }
         } else {
@@ -204,30 +211,6 @@ class Newebpay_Payment_Handler
         }
     }
 
-    /**
-     * 套用超商取貨設定
-     * 
-     * @param array $post_data 付款參數
-     * @param WC_Order $order 訂單物件
-     */
-    private function apply_cvscom_settings(&$post_data, $order)
-    {
-        // 超商取貨的備用邏輯（如果上面的 selected_payment 沒有處理到）
-        if (empty($post_data['CVSCOM'])) {
-            $get_select_payment = $this->get_available_payment_methods();
-            $cvscom_payed = $get_select_payment['CVSCOMPayed'] ?? '';
-            $cvscom_not_payed = $get_select_payment['CVSCOMNotPayed'] ?? '';
-            $custom_cvscom_not_payed = $order->get_meta('_CVSCOMNotPayed') ?? '';
-
-            if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
-                // 使用者選擇了超商取貨不付款
-                $post_data['CVSCOM'] = '1';
-            } elseif ($cvscom_payed == '1') {
-                // 使用者選擇了超商取貨付款
-                $post_data['CVSCOM'] = '2';
-            }
-        }
-    }
 
     /**
      * 驗證付款方式是否有效
@@ -348,6 +331,12 @@ class Newebpay_Payment_Handler
         
         // 儲存選擇的付款方式
         $order->update_meta_data('_nwpSelectedPayment', $this->gateway->nwpSelectedPayment);
+        
+        // 儲存信用卡分期期數（如果選擇了分期付款）
+        if ($this->gateway->nwpSelectedPayment === 'Inst' && isset($this->gateway->nwpInstFlag)) {
+            $order->update_meta_data('_nwpInstFlag', $this->gateway->nwpInstFlag);
+        }
+        
         $order->save();
         $order->add_order_note($this->gateway->nwpSelectedPayment, 1);
         
