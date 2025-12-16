@@ -107,15 +107,16 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 		 */
 		public function enqueue_button_styles() {
 			if ( is_order_received_page() || is_view_order_page() || is_checkout() ) {
+				$plugin_url = plugin_dir_url( NEWEB_MAIN_PATH . '/Central.php' );
 				wp_enqueue_style(
 					'newebpay-buttons',
-					plugins_url( 'assets/css/newebpay-buttons.css', NEWEB_MAIN_PATH ),
+					$plugin_url . 'assets/css/newebpay-buttons.css',
 					array(),
 					'1.0.2'
 				);
 				wp_enqueue_script(
 					'newebpay-buttons',
-					plugins_url( 'assets/js/public/newebpay-buttons.js', NEWEB_MAIN_PATH ),
+					$plugin_url . 'assets/js/public/newebpay-buttons.js',
 					array(),
 					'1.0.0',
 					true
