@@ -664,8 +664,14 @@ class WC_newebpay extends baseNwpMPG
         $allowed = array(
             'br' => array(),
             'p' => array('class' => true),
+            'div' => array('class' => true),
             'a' => array(
                 'href' => true,
+                'class' => true,
+            ),
+            'button' => array(
+                'type' => true,
+                'onclick' => true,
                 'class' => true,
             ),
             'strong' => array(),
@@ -736,8 +742,8 @@ class WC_newebpay extends baseNwpMPG
             $shop_url = home_url('/');
         }
 
-        return '<br><a class="button" href="' . esc_url($cart_url) . '">返回購物車</a> '
-            . '<a class="button" href="' . esc_url($shop_url) . '">返回商店</a>';
+        return '<br><div class="wc-block-order-confirmation-status__actions"><button type="button" onclick="window.location.href=\'' . esc_js($cart_url) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--try-again">返回購物車</button> '
+            . '<button type="button" onclick="window.location.href=\'' . esc_js($shop_url) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--my-account">返回商店</button></div>';
     }
 
     /**

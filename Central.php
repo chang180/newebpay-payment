@@ -66,6 +66,8 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			// 藍新回傳常為跨站 POST，可能因 SameSite 導致登入/Session cookie 未附帶。
 			// 這裡用 PRG（Post/Redirect/Get）在 template_redirect 階段先處理回傳並 redirect 到同 URL 的 GET，確保 cookie 能正常帶上。
 			add_action( 'template_redirect', array( $this, 'newebpay_prg_template_redirect' ), 1 );
+			// 載入按鈕樣式（移除預設 focus 狀態）
+			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_button_styles' ) );
 			$this->logger = class_exists( 'Newebpay_Logger' ) ? Newebpay_Logger::get_instance() : null;
 		}
 
@@ -98,6 +100,27 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			include_once NEWEB_MAIN_PATH . '/includes/nwp/nwpMPG.php';
 			include_once NEWEB_MAIN_PATH . '/includes/invoice/nwpElectronicInvoice.php';
 			include_once NEWEB_MAIN_PATH . '/includes/api/nwpOthersAPI.php';
+		}
+
+		/**
+		 * 載入按鈕樣式 CSS 和 JavaScript（移除預設 focus 狀態）
+		 */
+		public function enqueue_button_styles() {
+			if ( is_order_received_page() || is_view_order_page() || is_checkout() ) {
+				wp_enqueue_style(
+					'newebpay-buttons',
+					plugins_url( 'assets/css/newebpay-buttons.css', NEWEB_MAIN_PATH ),
+					array(),
+					'1.0.2'
+				);
+				wp_enqueue_script(
+					'newebpay-buttons',
+					plugins_url( 'assets/js/public/newebpay-buttons.js', NEWEB_MAIN_PATH ),
+					array(),
+					'1.0.0',
+					true
+				);
+			}
 		}
 
 		/**
@@ -153,11 +176,14 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 					$this->logger->warning( 'PRG: TradeSha validation failed', array( 'order_id' => $order_id ) );
 				}
 				$order->update_status( 'failed', 'Payment failed: SHA_INVALID (SHA validate fail)' );
+				$cart_url = esc_url( wc_get_cart_url() );
+				$shop_url = esc_url( wc_get_page_permalink( 'shop' ) ?: home_url( '/' ) );
 				$order->update_meta_data( '_newebpay_return_message', wp_kses(
-					'請重新填單<br><br><a class="button" href="' . esc_url( wc_get_cart_url() ) . '">返回購物車</a> <a class="button" href="' . esc_url( wc_get_page_permalink( 'shop' ) ?: home_url( '/' ) ) . '">返回商店</a>',
+					'請重新填單<br><br><div class="wc-block-order-confirmation-status__actions"><button type="button" onclick="window.location.href=\'' . esc_js( $cart_url ) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--try-again">返回購物車</button> <button type="button" onclick="window.location.href=\'' . esc_js( $shop_url ) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--my-account">返回商店</button></div>',
 					array(
-						'br' => array(),
-						'a'  => array( 'href' => true, 'class' => true ),
+						'br'     => array(),
+						'div'    => array( 'class' => true ),
+						'button' => array( 'type' => true, 'onclick' => true, 'class' => true ),
 					)
 				) );
 				$order->save();
@@ -188,13 +214,16 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 				$note = sprintf( 'Payment failed: %s (%s)', (string) $status, (string) $message );
 				$order->update_status( 'failed', $note );
 
+				$cart_url = esc_url( wc_get_cart_url() );
+				$shop_url = esc_url( wc_get_page_permalink( 'shop' ) ?: home_url( '/' ) );
 				$error_html = '交易失敗，請重新填單<br>錯誤代碼：' . esc_html( (string) $status ) . '<br>錯誤訊息：' . esc_html( urldecode( (string) $message ) )
-					. '<br><br><a class="button" href="' . esc_url( wc_get_cart_url() ) . '">返回購物車</a> <a class="button" href="' . esc_url( wc_get_page_permalink( 'shop' ) ?: home_url( '/' ) ) . '">返回商店</a>';
+					. '<br><br><div class="wc-block-order-confirmation-status__actions"><button type="button" onclick="window.location.href=\'' . esc_js( $cart_url ) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--try-again">返回購物車</button> <button type="button" onclick="window.location.href=\'' . esc_js( $shop_url ) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--my-account">返回商店</button></div>';
 				$order->update_meta_data( '_newebpay_return_message', wp_kses(
 					$error_html,
 					array(
-						'br' => array(),
-						'a'  => array( 'href' => true, 'class' => true ),
+						'br'     => array(),
+						'div'    => array( 'class' => true ),
+						'button' => array( 'type' => true, 'onclick' => true, 'class' => true ),
 					)
 				) );
 				$order->save();

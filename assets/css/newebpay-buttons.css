@@ -1,0 +1,10 @@
+/* 移除按鈕預設的 focus outline，讓樣式與 WooCommerce 原始按鈕一致 */
+.wc-block-order-confirmation-status__button:focus {
+	outline: none;
+}
+
+/* 移除自動 focus 時的視覺效果，保持與原始狀態一致 */
+.wc-block-order-confirmation-status__button:focus:not(:active):not(:hover) {
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	transform: none;
+}
