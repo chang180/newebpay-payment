@@ -1,11 +1,46 @@
+/* 按鈕基本樣式 */
+.wc-block-order-confirmation-status__actions .wc-block-order-confirmation-status__button {
+	display: inline-block;
+	padding: 0.75em 1.5em;
+	margin-right: 16px;
+	margin-bottom: 0.5em;
+	background-color: #720eec;
+	color: #ffffff;
+	border: 1px solid #720eec;
+	border-radius: 4px;
+	font-size: 1em;
+	font-weight: 500;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 按鈕 hover 狀態 */
+.wc-block-order-confirmation-status__actions .wc-block-order-confirmation-status__button:hover {
+	background-color: #5a0bb8;
+	border-color: #5a0bb8;
+	color: #ffffff;
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* 按鈕 active 狀態 */
+.wc-block-order-confirmation-status__actions .wc-block-order-confirmation-status__button:active {
+	background-color: #4a0999;
+	border-color: #4a0999;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	transform: translateY(1px);
+}
+
 /* 移除按鈕預設的 focus outline，讓樣式與 WooCommerce 原始按鈕一致 */
-.wc-block-order-confirmation-status__button:focus {
+.wc-block-order-confirmation-status__actions .wc-block-order-confirmation-status__button:focus {
 	outline: none;
+	box-shadow: 0 0 0 2px rgba(114, 14, 236, 0.3);
 }
 
 /* 移除自動 focus 時的視覺效果，保持與原始狀態一致 */
-.wc-block-order-confirmation-status__button:focus:not(:active):not(:hover) {
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.wc-block-order-confirmation-status__actions .wc-block-order-confirmation-status__button:focus:not(:active):not(:hover) {
+	box-shadow: 0 0 0 2px rgba(114, 14, 236, 0.3);
 	transform: none;
 }
 
@@ -53,4 +88,14 @@
 .wc-block-order-confirmation-status__button--my-account:hover {
 	background-color: #2271b1 !important;
 	color: #fff !important;
+}
+
+/* 響應式設計：小螢幕上按鈕全寬 */
+@media (max-width: 782px) {
+	.wc-block-order-confirmation-status__actions .wc-block-order-confirmation-status__button {
+		display: block;
+		width: 100%;
+		margin-right: 0;
+		text-align: center;
+	}
 }
