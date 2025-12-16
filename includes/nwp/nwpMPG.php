@@ -92,6 +92,8 @@ class WC_newebpay extends baseNwpMPG
 
         // add_filter( 'woocommerce_thankyou_page', array( $this, 'thankyou_page' ) ); // 商店付款完成頁面
         add_filter('woocommerce_thankyou_order_received_text', array($this, 'order_received_text'));
+        // 當訂單已標記為失敗/取消時，不顯示訂單明細/帳單地址等「已收到訂單」畫面內容
+        add_action('woocommerce_before_thankyou', array($this, 'maybe_hide_thankyou_order_details'), 1);
     }
 
     /**
@@ -215,24 +217,10 @@ class WC_newebpay extends baseNwpMPG
             }
         }
 
-        $get_select_payment = $this->get_selected_payment();
-
-        $cvscom_payed = $get_select_payment['CVSCOMPayed'] ?? '';
-        
-        $cvscom_not_payed = $get_select_payment['CVSCOMNotPayed'] ?? '';
-        
-        $custom_cvscom_not_payed = $order->get_meta('_CVSCOMNotPayed') ?? '';
-
-        // 超商取貨的備用邏輯（如果上面的 selected_payment 沒有處理到）
-        if (empty($post_data['CVSCOM'])) {
-            if ($custom_cvscom_not_payed == '1' && $cvscom_not_payed == '1') {
-                // 使用者選擇了超商取貨不付款
-                $post_data['CVSCOM'] = '1';
-            } elseif ($cvscom_payed == '1') {
-                // 使用者選擇了超商取貨付款
-                $post_data['CVSCOM'] = '2';
-            }
-        } 
+        // 只有在明確選擇了 CVSCOM 相關支付方式時才設定 CVSCOM 參數
+        // 避免未選擇時也送出參數導致支付方式多出超商取貨選項
+        // CVSCOM 參數應該已經在上面根據 selected_payment 設定完成
+        // 如果 selected_payment 不是 CVSCOMPayed 或 CVSCOMNotPayed，就不應該設定 CVSCOM 參數 
 
         $aes    = $this->encProcess->create_mpg_aes_encrypt($post_data, $this->HashKey, $this->HashIV);
         $sha256 = $this->encProcess->aes_sha256_str($aes, $this->HashKey, $this->HashIV);
@@ -278,8 +266,19 @@ class WC_newebpay extends baseNwpMPG
     {
         $req_data = array();
 
-        // prevent other maker's payment method to show this text
+        // 若已在 POST 階段處理並存入訊息（PRG），則 GET 階段直接顯示該訊息
         if (!isset($_REQUEST['TradeSha'])) {
+            // 嘗試從 query 取得訂單
+            $order_id_from_query = absint(get_query_var('order-received'));
+            if ($order_id_from_query) {
+                $order = wc_get_order($order_id_from_query);
+                if ($order && method_exists($order, 'get_payment_method') && $order->get_payment_method() === $this->id) {
+                    $stored_message = $order->get_meta('_newebpay_return_message');
+                    if (!empty($stored_message)) {
+                        return $stored_message;
+                    }
+                }
+            }
             return;
         }
 
@@ -970,6 +969,66 @@ class WC_newebpay extends baseNwpMPG
             return array_merge($init_array, $arr);
         }
         return $init_array;
+    }
+
+    /**
+     * thankyou.php 即使在 failed 分支，仍會執行 woocommerce_thankyou hook（預設會輸出訂單明細）。
+     * 這裡在藍新金流且訂單失敗/取消時移除該輸出，避免顯示完整訂單資料。
+     */
+    public function maybe_hide_thankyou_order_details($order_id)
+    {
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+        if (method_exists($order, 'get_payment_method') && $order->get_payment_method() !== $this->id) {
+            return;
+        }
+        if ($order->has_status(array('failed', 'cancelled'))) {
+            // 移除所有可能輸出訂單資訊的 hook（保留「再試一次」按鈕，但隱藏詳細明細）
+            remove_action('woocommerce_thankyou', 'woocommerce_order_details_table', 10);
+            remove_action('woocommerce_thankyou_' . $this->id, array($this, 'receipt_page'), 10);
+
+            // 隱藏訂單明細
+            echo '<style type="text/css">
+                .woocommerce-order .woocommerce-order-details,
+                .woocommerce-order .woocommerce-customer-details,
+                .woocommerce-order .woocommerce-table--order-details,
+                .woocommerce-order table.woocommerce-table--order-details {
+                    display: none !important;
+                }
+            </style>';
+        }
+    }
+
+    /**
+     * 交易失敗時提供返回連結
+     */
+    private function get_return_links_html()
+    {
+        $cart_url = function_exists('wc_get_cart_url') ? wc_get_cart_url() : home_url('/');
+        $shop_url = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/');
+        if (empty($shop_url)) {
+            $shop_url = home_url('/');
+        }
+        return '<br><br><a class="button" href="' . esc_url($cart_url) . '">返回購物車</a> <a class="button" href="' . esc_url($shop_url) . '">返回商店</a>';
+    }
+
+    /**
+     * 儲存/輸出用：允許基本排版與按鈕連結
+     */
+    private function sanitize_return_message($html)
+    {
+        if (empty($html)) {
+            return '';
+        }
+        return wp_kses($html, array(
+            'br' => array(),
+            'p' => array('class' => true),
+            'div' => array('class' => true),
+            'a' => array('href' => true, 'class' => true),
+            'button' => array('class' => true, 'type' => true),
+        ));
     }
 
     /**
