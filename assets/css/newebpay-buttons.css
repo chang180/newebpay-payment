@@ -8,3 +8,49 @@
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	transform: none;
 }
+
+/* 為 4 個按鈕設定不同的背景顏色 */
+/* 返回購物車按鈕 - 綠色 */
+.wc-block-order-confirmation-status__button--cart {
+	background-color: #1fb25a !important;
+	border-color: #1fb25a !important;
+}
+
+.wc-block-order-confirmation-status__button--cart:hover {
+	background-color: #1a9a4a !important;
+	border-color: #1a9a4a !important;
+}
+
+/* 返回商店按鈕 - 藍色 */
+.wc-block-order-confirmation-status__button--shop {
+	background-color: #2271b1 !important;
+	border-color: #2271b1 !important;
+}
+
+.wc-block-order-confirmation-status__button--shop:hover {
+	background-color: #135e96 !important;
+	border-color: #135e96 !important;
+}
+
+/* 再試一次按鈕 - 藍色（主要操作） */
+.wc-block-order-confirmation-status__button--try-again {
+	background-color: #2271b1 !important;
+	border-color: #2271b1 !important;
+}
+
+.wc-block-order-confirmation-status__button--try-again:hover {
+	background-color: #135e96 !important;
+	border-color: #135e96 !important;
+}
+
+/* 我的帳號按鈕 - 透明背景（次要操作，已有樣式但確保覆蓋） */
+.wc-block-order-confirmation-status__button--my-account {
+	background-color: transparent !important;
+	color: #2271b1 !important;
+	border-color: #2271b1 !important;
+}
+
+.wc-block-order-confirmation-status__button--my-account:hover {
+	background-color: #2271b1 !important;
+	color: #fff !important;
+}

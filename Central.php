@@ -180,6 +180,8 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 					array(
 						'br' => array(),
 						'a'  => array( 'href' => true, 'class' => true ),
+						'div' => array( 'class' => true ),
+						'button' => array( 'type' => true, 'class' => true, 'onclick' => true ),
 					)
 				) );
 				$order->save();
@@ -218,6 +220,8 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 					array(
 						'br' => array(),
 						'a'  => array( 'href' => true, 'class' => true ),
+						'div' => array( 'class' => true ),
+						'button' => array( 'type' => true, 'class' => true, 'onclick' => true ),
 					)
 				) );
 				$order->save();
@@ -232,6 +236,8 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 				array(
 					'br' => array(),
 					'a'  => array( 'href' => true, 'class' => true ),
+					'div' => array( 'class' => true ),
+					'button' => array( 'type' => true, 'class' => true, 'onclick' => true ),
 				)
 			) );
 			$order->save();
@@ -302,7 +308,10 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 			if ( empty( $shop_url ) ) {
 				$shop_url = home_url( '/' );
 			}
-			return '<br><br><a class="button" href="' . esc_url( $cart_url ) . '">返回購物車</a> <a class="button" href="' . esc_url( $shop_url ) . '">返回商店</a>';
+			return '<div class="wc-block-order-confirmation-status__actions">'
+				. '<button type="button" onclick="window.location.href=\'' . esc_js( $cart_url ) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--cart">返回購物車</button>'
+				. '<button type="button" onclick="window.location.href=\'' . esc_js( $shop_url ) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--shop">返回商店</button>'
+				. '</div>';
 		}
 	}
 

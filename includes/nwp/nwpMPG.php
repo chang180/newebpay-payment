@@ -1011,7 +1011,10 @@ class WC_newebpay extends baseNwpMPG
         if (empty($shop_url)) {
             $shop_url = home_url('/');
         }
-        return '<br><br><a class="button" href="' . esc_url($cart_url) . '">返回購物車</a> <a class="button" href="' . esc_url($shop_url) . '">返回商店</a>';
+        return '<div class="wc-block-order-confirmation-status__actions">'
+            . '<button type="button" onclick="window.location.href=\'' . esc_js($cart_url) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--cart">返回購物車</button>'
+            . '<button type="button" onclick="window.location.href=\'' . esc_js($shop_url) . '\'" class="wc-block-order-confirmation-status__button wc-block-order-confirmation-status__button--shop">返回商店</button>'
+            . '</div>';
     }
 
     /**
@@ -1027,7 +1030,7 @@ class WC_newebpay extends baseNwpMPG
             'p' => array('class' => true),
             'div' => array('class' => true),
             'a' => array('href' => true, 'class' => true),
-            'button' => array('class' => true, 'type' => true),
+            'button' => array('class' => true, 'type' => true, 'onclick' => true),
         ));
     }
 
