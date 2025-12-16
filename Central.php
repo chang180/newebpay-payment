@@ -112,13 +112,13 @@ if ( ! class_exists( 'WC_Newebpay_Payment' ) ) {
 					'newebpay-buttons',
 					$plugin_url . 'assets/css/newebpay-buttons.css',
 					array(),
-					'1.0.2'
+					'1.0.3'
 				);
 				wp_enqueue_script(
 					'newebpay-buttons',
 					$plugin_url . 'assets/js/public/newebpay-buttons.js',
 					array(),
-					'1.0.0',
+					'1.0.1',
 					true
 				);
 			}
