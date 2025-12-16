@@ -1,7 +1,0 @@
-# Newebpay Payment Logs Protection
-Order deny,allow
-Deny from all
-<Files ~ "\.(log|bak)$">
-    Order deny,allow
-    Deny from all
-</Files>
