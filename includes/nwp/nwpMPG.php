@@ -164,56 +164,72 @@ class WC_newebpay extends baseNwpMPG
             'LangType'        => $this->LangType,
         );
 
-        // 從訂單 meta 資料取得選擇的支付方式
-        $selected_payment = $order->get_meta('_nwpSelectedPayment');
+        // 從訂單 meta 取得：選擇的支付方式、是否勾選「取貨不付款」
+        // 邏輯：1) CVSCOM 同一參數 2=取貨付款/1=取貨不付款  2) 取貨付款為獨立支付方式  3) 取貨不付款為搭配參數（checkbox）
+        $selected_payment   = $order->get_meta('_nwpSelectedPayment');
+        $cvscom_not_payed  = (int) $order->get_meta('_CVSCOMNotPayed');
+
         if (!empty($selected_payment)) {
-            // 智慧ATM2.0 特殊處理 - 使用 VACC 參數加上額外參數
-            if ($selected_payment === 'SmartPay') {
-                $post_data['VACC'] = 1;
-                
-                // 取得智慧ATM2.0的設定參數
-                $source_type = trim($this->get_option('SmartPaySourceType'));
-                $source_bank_id = trim($this->get_option('SmartPaySourceBankId'));
-                $source_account_no = trim($this->get_option('SmartPaySourceAccountNo'));
-                
-                // 加入智慧ATM2.0必要參數
-                if (!empty($source_type)) {
-                    $post_data['SourceType'] = $source_type;
-                }
-                if (!empty($source_bank_id)) {
-                    $post_data['SourceBankId'] = $source_bank_id;
-                }
-                if (!empty($source_account_no)) {
-                    $post_data['SourceAccountNo'] = $source_account_no;
-                }
-            } elseif ($selected_payment === 'CVSCOMPayed') {
-                // 超商取貨付款
-                $post_data['CVSCOM'] = '2';
-            } elseif ($selected_payment === 'CVSCOMNotPayed') {
-                // 超商取貨不付款
+            if ($cvscom_not_payed === 1) {
+                // 有勾選「取貨不付款」：送 CVSCOM=1，並依選擇的支付方式決定是否一併送出該方式
                 $post_data['CVSCOM'] = '1';
-            } elseif ($selected_payment === 'Inst') {
-                // 信用卡分期付款特殊處理
-                // 信用卡分期是一種獨立的付款方式，只需要設置 InstFlag 參數
-                // 藍新金流 API 格式：
-                // - InstFlag = 1：顯示所有可用的分期選項
-                // - InstFlag = 3, 6, 12, 18, 24, 30：指定特定期數
-                
-                // 嘗試從訂單 meta 取得用戶選擇的分期期數
-                $inst_flag = $order->get_meta('_nwpInstFlag');
-                
-                // 有效期數：3, 6, 12, 18, 24, 30
-                // 如果用戶指定了有效期數，則使用該期數
-                if (!empty($inst_flag) && in_array((int)$inst_flag, [3, 6, 12, 18, 24, 30])) {
-                    $post_data['InstFlag'] = (int)$inst_flag;
-                } else {
-                    // 如果用戶沒有選擇期數，設置 InstFlag = 1，讓藍新顯示所有可用的分期選項
-                    // 即使後台設定了期數限制，用戶未選擇時仍使用全開模式
-                    $post_data['InstFlag'] = 1;
+                if ($selected_payment !== 'CVSCOMPayed') {
+                    // 搭配其他支付方式（信用卡、ATM 等）→ 送該方式 + CVSCOM=1
+                    if ($selected_payment === 'SmartPay') {
+                        $post_data['VACC'] = 1;
+                        $source_type = trim($this->get_option('SmartPaySourceType'));
+                        $source_bank_id = trim($this->get_option('SmartPaySourceBankId'));
+                        $source_account_no = trim($this->get_option('SmartPaySourceAccountNo'));
+                        if (!empty($source_type)) {
+                            $post_data['SourceType'] = $source_type;
+                        }
+                        if (!empty($source_bank_id)) {
+                            $post_data['SourceBankId'] = $source_bank_id;
+                        }
+                        if (!empty($source_account_no)) {
+                            $post_data['SourceAccountNo'] = $source_account_no;
+                        }
+                    } elseif ($selected_payment === 'Inst') {
+                        $inst_flag = $order->get_meta('_nwpInstFlag');
+                        if (!empty($inst_flag) && in_array((int)$inst_flag, [3, 6, 12, 18, 24, 30])) {
+                            $post_data['InstFlag'] = (int)$inst_flag;
+                        } else {
+                            $post_data['InstFlag'] = 1;
+                        }
+                    } else {
+                        $post_data[strtoupper($selected_payment)] = 1;
+                    }
                 }
+                // 若選的是 CVSCOMPayed + 勾選取貨不付款 → 只送 CVSCOM=1，上面不進入
             } else {
-                // 其他支付方式的正常處理
-                $post_data[strtoupper($selected_payment)] = 1;
+                // 未勾選取貨不付款：依選擇的支付方式送參數
+                if ($selected_payment === 'SmartPay') {
+                    $post_data['VACC'] = 1;
+                    $source_type = trim($this->get_option('SmartPaySourceType'));
+                    $source_bank_id = trim($this->get_option('SmartPaySourceBankId'));
+                    $source_account_no = trim($this->get_option('SmartPaySourceAccountNo'));
+                    if (!empty($source_type)) {
+                        $post_data['SourceType'] = $source_type;
+                    }
+                    if (!empty($source_bank_id)) {
+                        $post_data['SourceBankId'] = $source_bank_id;
+                    }
+                    if (!empty($source_account_no)) {
+                        $post_data['SourceAccountNo'] = $source_account_no;
+                    }
+                } elseif ($selected_payment === 'CVSCOMPayed') {
+                    // 超商取貨付款（獨立支付方式）→ 只送 CVSCOM=2
+                    $post_data['CVSCOM'] = '2';
+                } elseif ($selected_payment === 'Inst') {
+                    $inst_flag = $order->get_meta('_nwpInstFlag');
+                    if (!empty($inst_flag) && in_array((int)$inst_flag, [3, 6, 12, 18, 24, 30])) {
+                        $post_data['InstFlag'] = (int)$inst_flag;
+                    } else {
+                        $post_data['InstFlag'] = 1;
+                    }
+                } else {
+                    $post_data[strtoupper($selected_payment)] = 1;
+                }
             }
         }
 
@@ -719,13 +735,15 @@ class WC_newebpay extends baseNwpMPG
      */
     public function validate_fields()
     {
-        $cvscom_not_payed = sanitize_text_field($_POST['cvscom_not_payed']);
-        if ($cvscom_not_payed == 'CVSCOMNotPayed') {
-            $this->nwpCVSCOMNotPayed = 1;
-        }
-        $choose_payment = sanitize_text_field($_POST['nwp_selected_payments']);
+        $choose_payment = sanitize_text_field(wp_unslash($_POST['nwp_selected_payments']));
         if ($_POST['payment_method'] == $this->id) {
             $this->nwpSelectedPayment = $choose_payment;
+            // 超商取貨不付款為搭配參數：勾選時只記住「取貨不付款」，支付方式仍為下拉選的值（送參時再依此組 CVSCOM=1 與該方式）
+            if (isset($_POST['cvscom_not_payed']) && sanitize_text_field(wp_unslash($_POST['cvscom_not_payed'])) === 'CVSCOMNotPayed') {
+                $this->nwpCVSCOMNotPayed = 1;
+            } else {
+                $this->nwpCVSCOMNotPayed = 0;
+            }
             
             // 驗證信用卡分期期數（如果選擇了分期付款）
             if ($choose_payment === 'Inst') {
@@ -890,8 +908,7 @@ class WC_newebpay extends baseNwpMPG
         }
         
         if ($cvscom_not_payed == 1) {
-            $szHtml .= '<br><input type="checkbox" name="cvscom_not_payed" id="CVSCOMNotPayed" value="CVSCOMNotPayed">';
-            $szHtml .= '<label for="CVSCOMNotPayed">超商取貨不付款</label>';
+            $szHtml .= '<br><span id="nwp_cvscom_not_payed_wrapper"><input type="checkbox" name="cvscom_not_payed" id="CVSCOMNotPayed" value="CVSCOMNotPayed"><label for="CVSCOMNotPayed">超商取貨不付款</label></span>';
         }
         return $szHtml;
     }

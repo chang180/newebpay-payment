@@ -6,7 +6,7 @@ Tested up to: 6.8
 Requires PHP: 8.0
 WC requires at least: 8.0
 WC tested up to: 10.1
-Stable tag: 1.0.11
+Stable tag: 1.0.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,10 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 == Frequently Asked Questions ==
 
 == Changelog ==
+
+= 1.0.12 =
+* 修正：恢復「超商取貨不付款」搭配其他支付方式時正確送出 CVSCOM 參數
+* 說明：1.0.11 修正「選擇其他支付方式時會一併顯示超商取貨付款」時移除了備用邏輯，導致勾選取貨不付款時 CVSCOM=1 未送出；本版改依訂單 meta 決定 CVSCOM 送 1/2 與否，既避免未勾選時誤送，也恢復勾選時正確送出
 
 = 1.0.11 =
 * 信用卡分期：新增可設定開放分期期數；結帳選擇分期時需選擇期數，並正確帶入 InstFlag（未設定期數時維持全開 InstFlag=1）
