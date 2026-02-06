@@ -72,14 +72,10 @@ class Newebpay_Payment_Handler
             throw $e;
         }
 
-        // 處理付款方式選擇
+        // 處理付款方式選擇（含超商取貨不付款搭配參數：1=同一 CVSCOM 參數 2=取貨付款為獨立支付 3=取貨不付款為 checkbox 搭配）
         $selected_payment = $this->get_selected_payment_method($order);
-        $this->apply_payment_method($post_data, $selected_payment, $order);
-        
-        // 只有在明確選擇了 CVSCOM 相關支付方式時才設定 CVSCOM 參數
-        // 避免未選擇時也送出參數導致支付方式多出超商取貨選項
-        // CVSCOM 參數應該已經在上面根據 selected_payment 設定完成
-        // 如果 selected_payment 不是 CVSCOMPayed 或 CVSCOMNotPayed，就不應該設定 CVSCOM 參數
+        $cvscom_not_payed = (int) $order->get_meta('_CVSCOMNotPayed');
+        $this->apply_payment_method($post_data, $selected_payment, $order, $cvscom_not_payed);
 
         // 加密處理
         $aes = $this->gateway->encProcess->create_mpg_aes_encrypt($post_data, $this->gateway->HashKey, $this->gateway->HashIV);
@@ -147,30 +143,49 @@ class Newebpay_Payment_Handler
 
     /**
      * 套用付款方式到參數
-     * 
+     * 邏輯：1) CVSCOM 同一參數 2=取貨付款/1=取貨不付款  2) 取貨付款為獨立支付方式  3) 取貨不付款為搭配參數（checkbox）
+     *
      * @param array $post_data 付款參數
      * @param string $selected_payment 選擇的付款方式
      * @param WC_Order $order 訂單物件
+     * @param int $cvscom_not_payed 是否勾選取貨不付款（從訂單 _CVSCOMNotPayed）
      */
-    private function apply_payment_method(&$post_data, $selected_payment, $order)
+    private function apply_payment_method(&$post_data, $selected_payment, $order, $cvscom_not_payed = 0)
     {
         if (empty($selected_payment)) {
             return;
         }
 
-        // 統一轉換為小寫進行比較，避免大小寫不一致問題
         $selected_payment_lower = strtolower($selected_payment);
-        
-        // 智慧ATM2.0 特殊處理 - 使用 VACC 參數加上額外參數
+
+        if ($cvscom_not_payed === 1) {
+            // 有勾選「取貨不付款」：送 CVSCOM=1，並依選擇的支付方式決定是否一併送出該方式
+            $post_data['CVSCOM'] = '1';
+            if ($selected_payment_lower !== 'cvscompayed') {
+                $this->apply_single_payment_method($post_data, $selected_payment_lower, $order);
+            }
+            return;
+        }
+
+        // 未勾選取貨不付款：依選擇的支付方式送參數
+        $this->apply_single_payment_method($post_data, $selected_payment_lower, $order, true);
+    }
+
+    /**
+     * 套用單一付款方式到 post_data（SmartPay / Inst / CVSCOMPayed / 其他）
+     *
+     * @param array $post_data 付款參數
+     * @param string $selected_payment_lower 選擇的付款方式（小寫）
+     * @param WC_Order $order 訂單物件
+     * @param bool $include_cvscompayed 是否處理 CVSCOMPayed（未勾選取貨不付款時為 true）
+     */
+    private function apply_single_payment_method(&$post_data, $selected_payment_lower, $order, $include_cvscompayed = false)
+    {
         if ($selected_payment_lower === 'smartpay') {
             $post_data['VACC'] = 1;
-            
-            // 取得智慧ATM2.0的設定參數
             $source_type = trim($this->gateway->get_option('SmartPaySourceType'));
             $source_bank_id = trim($this->gateway->get_option('SmartPaySourceBankId'));
             $source_account_no = trim($this->gateway->get_option('SmartPaySourceAccountNo'));
-            
-            // 加入智慧ATM2.0必要參數
             if (!empty($source_type)) {
                 $post_data['SourceType'] = $source_type;
             }
@@ -180,34 +195,19 @@ class Newebpay_Payment_Handler
             if (!empty($source_account_no)) {
                 $post_data['SourceAccountNo'] = $source_account_no;
             }
-        } elseif ($selected_payment_lower === 'cvscompayed') {
-            // 超商取貨付款
+        } elseif ($include_cvscompayed && $selected_payment_lower === 'cvscompayed') {
             $post_data['CVSCOM'] = '2';
-        } elseif ($selected_payment_lower === 'cvscomnotpayed') {
-            // 超商取貨不付款
-            $post_data['CVSCOM'] = '1';
         } elseif ($selected_payment_lower === 'inst') {
-            // 信用卡分期付款特殊處理
-            // 信用卡分期是一種獨立的付款方式，只需要設置 InstFlag 參數
-            // 藍新金流 API 格式：
-            // - InstFlag = 1：顯示所有可用的分期選項
-            // - InstFlag = 3, 6, 12, 18, 24, 30：指定特定期數
-            
-            // 嘗試從訂單 meta 取得用戶選擇的分期期數
             $inst_flag = $order->get_meta('_nwpInstFlag');
-            
-            // 有效期數：3, 6, 12, 18, 24, 30
-            // 如果用戶指定了有效期數，則使用該期數
             if (!empty($inst_flag) && in_array((int)$inst_flag, [3, 6, 12, 18, 24, 30])) {
                 $post_data['InstFlag'] = (int)$inst_flag;
             } else {
-                // 如果用戶沒有選擇期數，設置 InstFlag = 1，讓藍新顯示所有可用的分期選項
-                // 即使後台設定了期數限制，用戶未選擇時仍使用全開模式
                 $post_data['InstFlag'] = 1;
             }
         } else {
-            // 其他付款方式的正常處理
-            $post_data[strtoupper($selected_payment)] = 1;
+            if ($selected_payment_lower !== 'cvscomnotpayed') {
+                $post_data[strtoupper($selected_payment_lower)] = 1;
+            }
         }
     }
 
